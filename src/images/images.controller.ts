@@ -31,10 +31,10 @@ const storage = diskStorage({
     },
 });
 
-// Fix issue #7: throw BadRequestException instead of generic Error
-const imageFileFilter = (_req: any, file: any, cb: any) => {
-    if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-        return cb(new BadRequestException('Only JPEG, PNG, and WebP images are allowed'), false);
+// Fix issue #7: allow images AND document files for resumes
+const fileFilterConfig = (_req: any, file: any, cb: any) => {
+    if (!file.mimetype.match(/\/(jpg|jpeg|png|webp|pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/)) {
+        return cb(new BadRequestException('Only Images and PDF/Word documents are allowed'), false);
     }
     cb(null, true);
 };
@@ -43,10 +43,9 @@ const imageFileFilter = (_req: any, file: any, cb: any) => {
 export class ImagesController {
     constructor(private imagesService: ImagesService) { }
 
-    /** POST /images/upload — upload image with metadata */
     @Post('upload')
     @UseGuards(JwtAuthGuard)
-    @UseInterceptors(FileInterceptor('file', { storage, fileFilter: imageFileFilter }))
+    @UseInterceptors(FileInterceptor('file', { storage, fileFilter: fileFilterConfig }))
     upload(
         @UploadedFile(
             new ParseFilePipe({
@@ -73,7 +72,7 @@ export class ImagesController {
     /** PUT /images/profile — upload/replace current user profile image */
     @Put('profile')
     @UseGuards(JwtAuthGuard)
-    @UseInterceptors(FileInterceptor('file', { storage, fileFilter: imageFileFilter }))
+    @UseInterceptors(FileInterceptor('file', { storage, fileFilter: fileFilterConfig }))
     setProfile(
         @UploadedFile(
             new ParseFilePipe({

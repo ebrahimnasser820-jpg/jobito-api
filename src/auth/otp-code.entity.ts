@@ -9,11 +9,11 @@ import { User } from '../users/user.entity.js';
 
 @Entity({ schema: 'ptj', name: 'otp_codes' })
 export class OtpCode {
-    @PrimaryGeneratedColumn('uuid')
-    otp_id: string;
+    @PrimaryGeneratedColumn('uuid', { name: 'otp_id' })
+    otpId: string;
 
-    @Column({ type: 'uuid' })
-    user_id: string;
+    @Column({ name: 'user_id', type: 'uuid' })
+    userId: string;
 
     @ManyToOne(() => User, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'user_id' })
@@ -22,9 +22,9 @@ export class OtpCode {
     @Column({ length: 10 })
     code: string;
 
-    @Column({ type: 'timestamptz' })
-    expires_at: Date;
+    @Column({ name: 'expires_at', type: 'timestamptz' })
+    expiresAt: Date;
 
-    @Column({ default: false })
-    is_used: boolean;
+    @Column({ name: 'is_used', default: false })
+    isUsed: boolean;
 }

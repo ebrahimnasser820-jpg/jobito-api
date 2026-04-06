@@ -12,25 +12,25 @@ export class TestimonialsService {
 
     /**
      * الـ featured testimonials اللي بتظهر في الصفحة الرئيسية
-     * بترجع الـ user معاها (full_name, email) عشان الـ React component
+     * بترجع الـ user معاها (fullName, email) عشان الـ React component
      */
     getFeatured() {
         return this.repo.find({
-            where: { is_featured: true },
+            where: { isFeatured: true },
             relations: ['user'],
-            order: { created_at: 'DESC' },
+            order: { createdAt: 'DESC' },
         });
     }
 
     findAll() {
         return this.repo.find({
             relations: ['user'],
-            order: { created_at: 'DESC' },
+            order: { createdAt: 'DESC' },
         });
     }
 
     create(userId: string, body: string) {
-        const testimonial = this.repo.create({ user_id: userId, body });
+        const testimonial = this.repo.create({ userId, body });
         return this.repo.save(testimonial);
     }
 }

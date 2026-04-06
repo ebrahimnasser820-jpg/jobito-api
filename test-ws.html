@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobito Real-time Demo</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f4f4f9;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .box {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        #messages,
+        #updates {
+            list-style: none;
+            padding: 0;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+
+        .sender {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .type {
+            color: #666;
+            font-style: italic;
+        }
+
+        .status {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .online {
+            color: green;
+        }
+
+        .offline {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Jobito Real-time WebSocket Demo</h1>
+    <div id="connection-status" class="status offline">Disconnected</div>
+
+    <div class="container">
+        <!-- Chat Section -->
+        <div class="box">
+            <h2>Chat Messages (Session Room)</h2>
+            <input type="text" id="sessionId" placeholder="Enter Session ID" value="test-session">
+            <button onclick="joinSession()">Join Session Room</button>
+            <button onclick="fetchHistory()">Fetch History (Page 1, Limit 5)</button>
+            <hr>
+            <h3>Upload Media</h3>
+            <input type="file" id="mediaFile">
+            <button onclick="uploadMedia()">Upload and Send</button>
+            <ul id="messages"></ul>
+        </div>
+
+        <!-- User Updates Section -->
+        <div class="box">
+            <h2>Profile Updates (User Room)</h2>
+            <input type="text" id="userId" placeholder="Enter User ID" value="12345678-1234-1234-1234-123456789012">
+            <button onclick="joinUser()">Join User Room</button>
+            <ul id="updates"></ul>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:3000');
+        const statusEl = document.getElementById('connection-status');
+        const messagesEl = document.getElementById('messages');
+        const updatesEl = document.getElementById('updates');
+
+        socket.on('connect', () => {
+            statusEl.textContent = 'Connected (ID: ' + socket.id + ')';
+            statusEl.className = 'status online';
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.textContent = 'Disconnected';
+            statusEl.className = 'status offline';
+        });
+
+        // Listen for new chat messages
+        socket.on('new_message', (data) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="sender">${data.sender}:</span> ${data.content || '<i>Media: ' + data.type + '</i>'} <br> <small style="color: grey">Intent: ${data.intent || 'N/A'}</small>`;
+            messagesEl.appendChild(li);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        });
+
+        // Listen for user profile updates
+        socket.on('user_updated', (data) => {
+            const li = document.createElement('li');
+            li.innerHTML = `User <b>${data.full_name}</b> updated his profile!`;
+            updatesEl.appendChild(li);
+            updatesEl.scrollTop = updatesEl.scrollHeight;
+        });
+
+        function joinSession() {
+            const id = document.getElementById('sessionId').value;
+            socket.emit('join_session', { sessionId: id }, (res) => {
+                alert('Joined session room: ' + id);
+            });
+        }
+
+        async function fetchHistory() {
+            const id = document.getElementById('sessionId').value;
+            const res = await fetch(`http://localhost:3000/chat/history/${id}?page=1&limit=5`);
+            const data = await res.json();
+            messagesEl.innerHTML = ''; // Clear to show pagination effect
+            data.forEach(msg => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="sender">${msg.sender}:</span> ${msg.content || 'Media'} <br> <small style="color: grey">Intent: ${msg.intent || 'N/A'}</small>`;
+                messagesEl.appendChild(li);
+            });
+        }
+
+        async function uploadMedia() {
+            const fileInput = document.getElementById('mediaFile');
+            if (fileInput.files.length === 0) return alert('Select a file');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const res = await fetch('http://localhost:3000/chat/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const { fileId, url } = await res.json();
+
+            // Send message with the uploaded file URL
+            socket.emit('send_message', {
+                userId: document.getElementById('userId').value,
+                sessionId: document.getElementById('sessionId').value,
+                sender: 'user',
+                type: fileInput.files[0].type.startsWith('image/') ? 'image' : 'video',
+                mediaUrl: url
+            });
+            alert('File uploaded and message sent!');
+        }
+
+        function joinUser() {
+            const id = document.getElementById('userId').value;
+            socket.emit('join_user', { userId: id }, (res) => {
+                alert('Joined user room: ' + id);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -4,9 +4,16 @@ import { Application } from './application.entity.js';
 import { ApplicationsService } from './applications.service.js';
 import { ApplicationsController } from './applications.controller.js';
 import { JobsModule } from '../jobs/jobs.module.js';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
+
+import { User } from '../users/user.entity.js';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Application]), JobsModule],
+    imports: [
+        TypeOrmModule.forFeature([Application, User]), 
+        JobsModule,
+        AuditLogsModule
+    ],
     controllers: [ApplicationsController],
     providers: [ApplicationsService],
 })

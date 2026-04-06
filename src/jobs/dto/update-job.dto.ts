@@ -1,57 +1,99 @@
 import {
-    IsOptional,
-    IsString,
-    IsEnum,
-    IsInt,
-    IsNumber,
-    IsBoolean,
-    Min,
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsBoolean,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { JobType } from '../job.entity.js';
 
 export class UpdateJobDto {
-    @IsOptional()
-    @IsString()
-    title?: string;
+  @IsOptional()
+  @IsString()
+  title?: string;
 
-    @IsOptional()
-    @IsString()
-    description?: string;
+  @IsOptional()
+  @IsString()
+  titleEn?: string;
 
-    @IsOptional()
-    @IsInt()
-    category_id?: number;
+  @IsOptional()
+  @IsString()
+  description?: string;
 
-    @IsOptional()
-    @IsNumber()
-    salary?: number;
+  @IsOptional()
+  @IsString()
+  descriptionEn?: string;
 
-    @IsOptional()
-    @IsString()
-    address?: string;
+  @IsOptional()
+  @IsString()
+  categoryName?: string;
 
-    @IsOptional()
-    @IsNumber()
-    latitude?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  categoryId?: number;
 
-    @IsOptional()
-    @IsNumber()
-    longitude?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  salary?: number;
 
-    @IsOptional()
-    @IsEnum(JobType)
-    job_type?: JobType;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  salaryMin?: number;
 
-    @IsOptional()
-    @IsInt()
-    @Min(1)
-    slots_available?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  salaryMax?: number;
 
-    @IsOptional()
-    @IsString()
-    price_type?: string;
+  @IsOptional()
+  @IsString()
+  address?: string;
 
-    @IsOptional()
-    @IsBoolean()
-    is_negotiable?: boolean;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
+
+  @IsOptional()
+  @IsEnum(JobType)
+  jobType?: JobType;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  slotsAvailable?: number;
+
+  @IsOptional()
+  @IsString()
+  priceType?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isNegotiable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  expiresAt?: string;
+
+  @IsOptional()
+  @IsString()
+  classification?: string;
+
+  @IsOptional()
+  benefits?: any;
 }

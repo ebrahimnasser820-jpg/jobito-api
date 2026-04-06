@@ -10,22 +10,25 @@ import { User } from '../users/user.entity.js';
 
 @Entity({ schema: 'ptj', name: 'testimonials' })
 export class Testimonial {
-    @PrimaryGeneratedColumn({ type: 'bigint' })
-    testimonial_id: number;
+    @PrimaryGeneratedColumn({ name: 'testimonial_id', type: 'bigint' })
+    testimonialId: number;
 
     @ManyToOne(() => User, { eager: true })
     @JoinColumn({ name: 'user_id' })
     user: User;
 
-    @Column({ type: 'uuid' })
-    user_id: string;
+    @Column({ name: 'user_id', type: 'uuid' })
+    userId: string;
 
     @Column({ type: 'text' })
     body: string;
 
-    @Column({ default: false })
-    is_featured: boolean;
+    @Column({ name: 'body_en', type: 'text', nullable: true })
+    bodyEn: string;
 
-    @CreateDateColumn({ type: 'timestamptz' })
-    created_at: Date;
+    @Column({ name: 'is_featured', default: false })
+    isFeatured: boolean;
+
+    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    createdAt: Date;
 }

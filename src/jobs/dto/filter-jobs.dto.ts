@@ -8,11 +8,19 @@ export class FilterJobsDto {
 
     @IsOptional()
     @IsEnum(JobType)
-    job_type?: JobType;
+    jobType?: JobType;
 
     @IsOptional()
     @IsNumberString()
-    category_id?: string;
+    categoryId?: string;
+
+    @IsOptional()
+    @IsNumberString()
+    companyId?: string;
+
+    @IsOptional()
+    @IsString()
+    location?: string;
 
     @IsOptional()
     @IsNumberString()

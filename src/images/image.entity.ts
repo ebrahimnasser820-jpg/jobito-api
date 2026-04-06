@@ -22,30 +22,30 @@ export enum ImageType {
 
 @Entity({ schema: 'ptj', name: 'images' })
 export class Image {
-    @PrimaryGeneratedColumn('uuid')
-    image_id: string;
+    @PrimaryGeneratedColumn('uuid', { name: 'image_id' })
+    imageId: string;
 
-    @Column({ type: 'enum', enum: ImageEntityType, enumName: 'ptj_image_entity' })
-    entity_type: ImageEntityType;
+    @Column({ name: 'entity_type', type: 'enum', enum: ImageEntityType, enumName: 'ptj_image_entity' })
+    entityType: ImageEntityType;
 
-    @Column({ type: 'text' })
-    entity_id: string;
+    @Column({ name: 'entity_id', type: 'text' })
+    entityId: string;
 
-    @Column({ type: 'enum', enum: ImageType, enumName: 'ptj_image_type', default: ImageType.GALLERY })
-    image_type: ImageType;
+    @Column({ name: 'image_type', type: 'enum', enum: ImageType, enumName: 'ptj_image_type', default: ImageType.GALLERY })
+    imageType: ImageType;
 
-    @Column({ type: 'text' })
-    image_url: string;
+    @Column({ name: 'image_url', type: 'text' })
+    imageUrl: string;
 
-    @Column({ type: 'int', nullable: true })
-    file_size: number;
+    @Column({ name: 'file_size', type: 'int', nullable: true })
+    fileSize: number;
 
-    @Column({ type: 'text', nullable: true })
-    alt_text: string;
+    @Column({ name: 'alt_text', type: 'text', nullable: true })
+    altText: string;
 
-    @Column({ default: false })
-    is_primary: boolean;
+    @Column({ name: 'is_primary', default: false })
+    isPrimary: boolean;
 
-    @CreateDateColumn({ type: 'timestamptz' })
-    created_at: Date;
+    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    createdAt: Date;
 }

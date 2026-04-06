@@ -9,4 +9,11 @@ export class AppController {
   getRoot() {
     return { message: 'API is working' };
   }
+
+  @Get('config')
+  getPublicConfig() {
+    return {
+      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    };
+  }
 }

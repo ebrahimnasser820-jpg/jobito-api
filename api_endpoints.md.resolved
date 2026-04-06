@@ -1,0 +1,46 @@
+# API Endpoints Overview
+
+## Root
+- `GET /` – Health check (root endpoint)
+
+## Applications (`/applications`)
+- `POST /applications` – Apply to a job (student)
+- `GET /applications/my` – Get current user's applications (student)
+- `GET /applications/job/:jobId` – Get applications for a specific job (company)
+
+## Authentication (`/auth`)
+- `POST /auth/register` – Register a new user
+- `POST /auth/login` – Login
+- `POST /auth/verify-email` – Verify email with code
+- `POST /auth/resend-code` – Resend verification code
+- `POST /auth/forgot-password` – Initiate password reset
+- `POST /auth/reset-password` – Reset password with code
+
+## Companies (`/companies`)
+- `GET /companies` – List all companies
+- `GET /companies/:id` – Get a company by ID
+- `POST /companies` – Create a company (company role, auth required)
+- `PATCH /companies/:id` – Update a company (company role, auth required)
+
+## Images (`/images`)
+- `POST /images/upload` – Upload an image with metadata (auth required)
+- `GET /images/entity/:type/:id` – List images for a given entity type and ID
+- `PUT /images/profile` – Set/replace current user's profile image (auth required)
+- `GET /images/profile/:userId` – Get a user's profile image
+- `DELETE /images/:imageId` – Delete an image (auth required)
+
+## Jobs (`/jobs`)
+- `GET /jobs` – List jobs with optional filters
+- `GET /jobs/nearby?lat=...&lon=...&radius=...` – Find nearby jobs
+- `GET /jobs/:id` – Get job details by ID
+- `POST /jobs` – Create a job (company role, auth required)
+- `PATCH /jobs/:id` – Update a job (company role, auth required)
+- `DELETE /jobs/:id` – Delete a job (company role, auth required)
+
+## Testimonials (`/testimonials`)
+- `GET /testimonials/featured` – Get featured testimonials for homepage
+- `GET /testimonials` – List all testimonials
+- `POST /testimonials` – Create a new testimonial (auth required)
+
+## Users (`/users`)
+- *No routes defined in the current controller file.*

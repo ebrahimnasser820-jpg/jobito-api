@@ -1,30 +1,67 @@
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { User } from './user.entity';
+import { User } from './user.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AppGateway } from '../common/gateways/app.gateway.js';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private repo: Repository<User>,
+    private usersRepository: Repository<User>,
+    private readonly gateway: AppGateway,
   ) { }
 
-  findByEmail(email: string) {
-    return this.repo.findOne({ where: { email } });
+  findAll() {
+    return this.usersRepository.find();
   }
 
-  create(userData: Partial<User>) {
-    const user = this.repo.create(userData);
-    return this.repo.save(user);
+  findByEmail(email: string) {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
+  findByGoogleId(googleId: string) {
+    return this.usersRepository.findOne({ where: { googleId } });
+  }
+
+  async create(userData: Partial<User>) {
+    const user = this.usersRepository.create(userData);
+    const updatedUser = await this.usersRepository.save(user);
+
+    // Broadcast update via WebSocket
+    this.gateway.notifyUserUpdate(updatedUser.userId, {
+      userId: updatedUser.userId,
+      fullName: updatedUser.fullName,
+      avatarUrl: updatedUser.avatarUrl,
+    });
+
+    return updatedUser;
   }
 
   findById(userId: string) {
-    return this.repo.findOne({ where: { user_id: userId } });
+    return this.usersRepository.findOne({ where: { userId } });
   }
 
   async update(userId: string, data: Partial<User>) {
-    await this.repo.update(userId, data);
-    return this.findById(userId);
+    await this.usersRepository.update(userId, data);
+    const updatedUser = await this.findById(userId);
+
+    if (updatedUser) {
+      this.gateway.notifyUserUpdate(userId, {
+        userId: userId,
+        fullName: updatedUser.fullName,
+        avatarUrl: updatedUser.avatarUrl,
+      });
+    }
+
+    return updatedUser;
+  }
+
+  async remove(userId: string) {
+    const user = await this.findById(userId);
+    if (user) {
+      return await this.usersRepository.remove(user);
+    }
+    return null;
   }
 }

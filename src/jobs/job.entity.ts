@@ -1,88 +1,118 @@
 import {
-    Entity,
-    Column,
-    PrimaryGeneratedColumn,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    OneToMany,
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Company } from '../companies/company.entity.js';
 import { Category } from './category.entity.js';
 import { Application } from '../applications/application.entity.js';
 
 export enum JobType {
-    PART_TIME = 'part-time',
-    ONE_TIME = 'one-time',
-    EVENT = 'event',
-    FREELANCE = 'freelance',
-    INTERNSHIP = 'internship',
+  PART_TIME = 'part-time',
+  FULL_TIME = 'full-time',
+  REMOTE = 'remote',
+  ONE_TIME = 'one-time',
+  EVENT = 'event',
+  FREELANCE = 'freelance',
+  INTERNSHIP = 'internship',
+  CONTRACT = 'contract',
 }
 
 @Entity({ schema: 'ptj', name: 'jobs' })
 export class Job {
-    @PrimaryGeneratedColumn({ type: 'bigint' })
-    job_id: number;
+  @PrimaryGeneratedColumn({ name: 'job_id', type: 'bigint' })
+  jobId: number;
 
-    @ManyToOne(() => Company, (company) => company.jobs, { eager: true })
-    @JoinColumn({ name: 'company_id' })
-    company: Company;
+  @ManyToOne(() => Company, (company) => company.jobs)
+  @JoinColumn({ name: 'company_id' })
+  company: Company;
 
-    @Column({ type: 'bigint', nullable: true })
-    company_id: number;
+  @Column({ name: 'company_id', type: 'bigint', nullable: true })
+  companyId: number | null;
 
-    @ManyToOne(() => Category, { eager: true, nullable: true })
-    @JoinColumn({ name: 'category_id' })
-    category: Category;
+  @ManyToOne(() => Category, (category) => category.jobs, { nullable: true })
+  @JoinColumn({ name: 'category_id' })
+  category: Category;
 
-    @Column({ type: 'bigint', nullable: true })
-    category_id: number;
+  @Column({ name: 'category_id', type: 'bigint', nullable: true })
+  categoryId: number | null;
 
-    @Column({ length: 255 })
-    title: string;
+  @Column({ length: 255 })
+  title: string;
 
-    @Column({ type: 'text', nullable: true })
-    description: string;
 
-    @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
-    salary: number;
 
-    @Column({ type: 'text', nullable: true })
-    address: string;
+  @Column({ type: 'text', nullable: true })
+  description: string;
 
-    @Column({ type: 'numeric', precision: 10, scale: 7, nullable: true })
-    latitude: number;
 
-    @Column({ type: 'numeric', precision: 10, scale: 7, nullable: true })
-    longitude: number;
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
+  salary: number;
 
-    @Column({
-        type: 'enum',
-        enum: JobType,
-        enumName: 'ptj_job_type',
-        default: JobType.PART_TIME,
-    })
-    job_type: JobType;
+  @Column({
+    name: 'salary_min',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  salaryMin: number;
 
-    @Column({ type: 'int', default: 1 })
-    slots_available: number;
+  @Column({
+    name: 'salary_max',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  salaryMax: number;
 
-    @Column({ length: 50, default: 'fixed' })
-    price_type: string;
+  @Column({ type: 'text', nullable: true })
+  address: string;
 
-    @Column({ default: false })
-    is_negotiable: boolean;
+  @Column({ type: 'numeric', precision: 10, scale: 7, nullable: true })
+  latitude: number;
 
-    @Column({ default: true })
-    is_active: boolean;
+  @Column({ type: 'numeric', precision: 10, scale: 7, nullable: true })
+  longitude: number;
 
-    @CreateDateColumn({ type: 'timestamptz' })
-    created_at: Date;
+  @Column({
+    name: 'job_type',
+    type: 'varchar',
+    length: 50,
+    default: 'part-time',
+  })
+  jobType: string;
 
-    @UpdateDateColumn({ type: 'timestamptz' })
-    updated_at: Date;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  classification: string;
 
-    @OneToMany(() => Application, (app) => app.job)
-    applications: Application[];
+  @Column({ name: 'slots_available', type: 'int', default: 1 })
+  slotsAvailable: number;
+
+  @Column({ name: 'price_type', length: 50, default: 'fixed' })
+  priceType: string;
+
+  @Column({ name: 'is_negotiable', default: false })
+  isNegotiable: boolean;
+
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
+
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  expiresAt: Date;
+
+  @OneToMany(() => Application, (app) => app.job)
+  applications: Application[];
 }
