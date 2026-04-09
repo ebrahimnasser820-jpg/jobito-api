@@ -30,6 +30,7 @@ import { FavoritesModule } from './favorites/favorites.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
 import { AiChatbotModule } from './ai-chatbot/ai-chatbot.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
+import { TranslationsModule } from './translations/translations.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -72,6 +73,7 @@ import { MonitoringModule } from './monitoring/monitoring.module.js';
     DashboardModule,
     AiChatbotModule,
     MonitoringModule,
+    TranslationsModule,
   ],
   controllers: [AppController],
   providers: [
