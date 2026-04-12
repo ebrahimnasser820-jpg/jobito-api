@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Body, UseGuards, Request, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Delete, Body, UseGuards, Request, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { UsersService } from './users.service.js';
 import { AuthService } from '../auth/auth.service.js';
@@ -66,6 +66,8 @@ export class UsersController {
         if (body.socialLinks !== undefined) updateData.socialLinks = body.socialLinks;
         if (body.languages !== undefined) updateData.languages = body.languages;
         if (body.location !== undefined) updateData.location = body.location;
+        if (body.themePreference !== undefined) updateData.themePreference = body.themePreference;
+        if (body.languagePreference !== undefined) updateData.languagePreference = body.languagePreference;
 
         const updatedUser = await this.usersService.update(userId, updateData);
         const { access_token } = await this.authService.refreshUserToken(userId);
@@ -78,6 +80,34 @@ export class UsersController {
             ...cleanUser,
             access_token
         };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch('me/theme')
+    async updateTheme(@Request() req, @Body() body: { theme: 'light' | 'dark' }) {
+        const userId = req.user.sub;
+        const theme = body.theme;
+
+        if (!theme || !['light', 'dark'].includes(theme)) {
+            throw new BadRequestException('Theme must be "light" or "dark"');
+        }
+
+        await this.usersService.update(userId, { themePreference: theme });
+        return { message: 'Theme updated', theme };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch('me/language')
+    async updateLanguage(@Request() req, @Body() body: { language: 'ar' | 'en' }) {
+        const userId = req.user.sub;
+        const language = body.language;
+
+        if (!language || !['ar', 'en'].includes(language)) {
+            throw new BadRequestException('Language must be "ar" or "en"');
+        }
+
+        await this.usersService.update(userId, { languagePreference: language });
+        return { message: 'Language updated', language };
     }
 
     @UseGuards(JwtAuthGuard)
@@ -121,3 +151,4 @@ export class UsersController {
         return { message: 'Account deactivated successfully' };
     }
 }
+

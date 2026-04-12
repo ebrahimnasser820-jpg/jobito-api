@@ -40,7 +40,7 @@ async function bootstrap() {
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization, ngrok-skip-browser-warning',
+    allowedHeaders: 'Content-Type, Accept, Authorization, x-lang, ngrok-skip-browser-warning',
     exposedHeaders: 'Content-Range, X-Content-Range',
     preflightContinue: false,
     optionsSuccessStatus: 204,

@@ -6,9 +6,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { WinstonModule } from 'nest-winston';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './database/typeorm.config.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
+import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
 import { winstonConfig } from './common/configs/logger.config.js';
 
 // Feature Modules
@@ -81,6 +82,10 @@ import { TranslationsModule } from './translations/translations.module.js';
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AutoTranslationInterceptor,
     },
   ],
 })

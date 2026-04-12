@@ -95,6 +95,12 @@ export class User {
   @Column({ type: 'text', nullable: true })
   location: string;
 
+  @Column({ name: 'theme_preference', length: 10, default: 'light' })
+  themePreference: string;
+
+  @Column({ name: 'language_preference', length: 10, default: 'en' })
+  languagePreference: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
