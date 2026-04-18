@@ -11,10 +11,10 @@ export class MonitoringReport {
   @PrimaryGeneratedColumn('uuid', { name: 'report_id' })
   reportId: string;
 
-  @Column({ name: 'error_type' })
+  @Column({ name: 'error_type', nullable: true })
   errorType: string;
 
-  @Column({ name: 'description', type: 'text' })
+  @Column({ name: 'description', type: 'text', nullable: true })
   description: string;
 
   @Column({ name: 'frequency', default: 1 })

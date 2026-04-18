@@ -7,10 +7,11 @@ import { JobsModule } from '../jobs/jobs.module.js';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
 
 import { User } from '../users/user.entity.js';
+import { ApplicantProfile } from '../users/applicant-profile.entity.js';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Application, User]), 
+        TypeOrmModule.forFeature([Application, User, ApplicantProfile]), 
         JobsModule,
         AuditLogsModule
     ],

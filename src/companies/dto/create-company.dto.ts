@@ -88,4 +88,16 @@ export class CreateCompanyDto {
     @IsOptional()
     @IsString()
     officePhoto2Url?: string;
+
+    @IsOptional()
+    @IsString()
+    taxId?: string;
+
+    @IsOptional()
+    @IsString()
+    licenseNumber?: string;
+
+    @IsOptional()
+    @IsString()
+    officialNationalId?: string;
 }

@@ -34,8 +34,11 @@ export class UsersController {
         
         // Exclude relations and return a plain object to prevent circular serialization crashes
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { applications, ...cleanUser } = user as any;
-        return cleanUser;
+        const { applications, applicantProfile, ...cleanUser } = user as any;
+        return {
+            ...cleanUser,
+            ...(applicantProfile || {})
+        };
     }
 
     @UseGuards(JwtAuthGuard)
@@ -59,7 +62,7 @@ export class UsersController {
         if (body.classification !== undefined) updateData.classification = body.classification;
         if (body.dob !== undefined) updateData.dob = body.dob === "" ? null : body.dob;
         if (body.gender !== undefined) updateData.gender = body.gender;
-        if (body.experience !== undefined) updateData.experience = Number(body.experience);
+        if (body.experience !== undefined) updateData.experienceYears = Number(body.experience);
         if (body.experiences !== undefined) updateData.experiences = body.experiences;
         if (body.educations !== undefined) updateData.educations = body.educations;
         if (body.portfolios !== undefined) updateData.portfolios = body.portfolios;
@@ -68,16 +71,18 @@ export class UsersController {
         if (body.location !== undefined) updateData.location = body.location;
         if (body.themePreference !== undefined) updateData.themePreference = body.themePreference;
         if (body.languagePreference !== undefined) updateData.languagePreference = body.languagePreference;
+        if (body.banner_url !== undefined) updateData.banner_url = body.banner_url;
 
         const updatedUser = await this.usersService.update(userId, updateData);
         const { access_token } = await this.authService.refreshUserToken(userId);
         
         // Exclude relations to avoid circular reference issues in serialization
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { applications, ...cleanUser } = updatedUser as any;
+        const { applications, applicantProfile, ...cleanUser } = updatedUser as any;
         
         return {
             ...cleanUser,
+            ...(applicantProfile || {}),
             access_token
         };
     }

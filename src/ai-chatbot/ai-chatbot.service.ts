@@ -6,7 +6,7 @@ import { LogsService } from '../monitoring/services/logs.service.js';
 @Injectable()
 export class AiChatbotService {
   private readonly logger = new Logger(AiChatbotService.name);
-  private readonly pythonUrl = 'http://localhost:5000/chat';
+  private readonly pythonUrl = process.env.PYTHON_CHATBOT_URL || 'http://localhost:5000/chat';
 
   constructor(
     private readonly httpService: HttpService,
@@ -22,7 +22,7 @@ export class AiChatbotService {
           message,
           user_id: userId,
         }, {
-          timeout: 5000, // 5 seconds timeout
+          timeout: 45000, // 45 seconds timeout (Local Generation takes time)
         }),
       );
 

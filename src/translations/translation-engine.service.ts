@@ -7,8 +7,8 @@ import { Translation } from './entities/translation.entity.js';
 
 @Injectable()
 export class TranslationEngineService implements OnModuleInit {
-  private readonly baseUrl = 'http://localhost:5001';
-  private readonly chunkSize = 10;
+  private readonly baseUrl = 'http://127.0.0.1:5001';
+  private readonly chunkSize = 20;
   private redis: Redis;
 
   constructor(
@@ -100,8 +100,13 @@ export class TranslationEngineService implements OnModuleInit {
     const chunks = this.createChunks(stillMissingTexts, this.chunkSize);
     
     try {
-      const chunkPromises = chunks.map((chunk) => this.translateChunk(chunk, targetLang));
-      const chunkResults = await Promise.all(chunkPromises);
+      const chunkResults: string[][] = [];
+      for (const chunk of chunks) {
+        const result = await this.translateChunk(chunk, targetLang);
+        chunkResults.push(result);
+        // Small delay between chunks to let Google Translate breathe
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       const flattenedResults = chunkResults.flat();
 
       // Synchronize results to Postgres and Redis

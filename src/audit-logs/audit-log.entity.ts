@@ -8,10 +8,10 @@ export class AuditLog {
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId: string | null;
 
-  @Column()
+  @Column({ nullable: true })
   action: string; // 'CREATE', 'UPDATE', 'DELETE', 'READ'
 
-  @Column()
+  @Column({ nullable: true })
   entity: string; // 'Job', 'Company', 'User', etc.
 
   @Column({ name: 'entity_id', nullable: true })

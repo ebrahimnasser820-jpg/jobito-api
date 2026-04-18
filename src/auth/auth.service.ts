@@ -129,7 +129,7 @@ export class AuthService {
         passwordHash: hash,
         role: role,
         phone: data.phone || data.companyPhone,
-        bio: JSON.stringify(data), // Stage data for post-verification profile creation
+        registrationData: JSON.stringify(data), // Stage data for post-verification profile creation
         isActive: false, 
       });
     } else {
@@ -140,7 +140,7 @@ export class AuthService {
         passwordHash: hash,
         role: role,
         phone: data.phone || data.companyPhone,
-        bio: JSON.stringify(data), // Stage data
+        registrationData: JSON.stringify(data), // Stage data
         isActive: false,
       });
     }
@@ -182,15 +182,18 @@ export class AuthService {
         await this.validateOtp(user.userId, code);
 
         // 2. SUCCESS! Now final profile creation happens
-        if (user.role === 'company' && user.bio) {
+        if (user.role === 'company' && user.registrationData) {
           try {
-            const registrationData = JSON.parse(user.bio);
+            const registrationData = JSON.parse(user.registrationData);
             await this.companiesService.create({
               name: registrationData.name || registrationData.companyName || user.fullName,
               contactEmail: user.email,
               phone: user.phone,
               address: registrationData.address || registrationData.companyAddress,
-              crDocumentUrl: registrationData.cr_document_url,
+              crDocumentUrl: registrationData.cr_document_url || registrationData.commercial_register,
+              taxId: registrationData.tax_number || registrationData.taxNumber,
+              licenseNumber: registrationData.license_number || registrationData.licenseNumber || registrationData.commercial_register,
+              officialNationalId: registrationData.national_id || registrationData.nationalId,
             });
             this.logger.info(`✅ Company profile created successfully for ${email}`);
           } catch (profileErr) {
@@ -201,7 +204,7 @@ export class AuthService {
         // 3. Activate and Clear staged data
         await this.usersService.update(user.userId, { 
           isActive: true,
-          bio: "" // Clear staging
+          registrationData: "" // Clear staging
         });
 
         return { message: 'Email verified and profile activated successfully!' };
@@ -259,9 +262,10 @@ export class AuthService {
       role: user.role,
       name: user.fullName,
       avatar: user.avatarUrl,
+      banner: user.banner_url,
       phone: user.phone || null,
 
-      gender: user.gender || null,
+      gender: user.applicantProfile?.gender || null,
       location: user.location || null,
       notificationPreferences: user.notificationPreferences || null,
     };
@@ -370,8 +374,9 @@ export class AuthService {
         role: user.role,
         name: user.fullName,
         avatar: user.avatarUrl,
+        banner: user.banner_url,
         phone: user.phone || null,
-        gender: user.gender || null,
+        gender: user.applicantProfile?.gender || null,
         location: user.location || null,
         notificationPreferences: user.notificationPreferences || null,
       };
@@ -428,7 +433,10 @@ export class AuthService {
 
   async refreshUserToken(userId: string) {
     const user = await this.usersService.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {
+      this.logger.error(`❌ [AuthService] refreshUserToken: User with ID ${userId} not found in database.`);
+      throw new NotFoundException('User not found');
+    }
 
     const jwtPayload = {
       sub: user.userId,
@@ -436,9 +444,10 @@ export class AuthService {
       role: user.role,
       name: user.fullName,
       avatar: user.avatarUrl,
+      banner: user.banner_url,
       phone: user.phone || null,
 
-      gender: user.gender || null,
+      gender: user.applicantProfile?.gender || null,
       location: user.location || null,
       notificationPreferences: user.notificationPreferences || null,
     };

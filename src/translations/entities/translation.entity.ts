@@ -2,10 +2,10 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeor
 
 @Entity({ name: 'translations', schema: 'ptj' })
 export class Translation {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn({ name: 'translation_id' })
+  translationId: number;
 
-  @Column({ name: 'translation_key', unique: true })
+  @Column({ name: 'translation_key', unique: true, nullable: true })
   translationKey: string;
 
   @Column({ type: 'text' })

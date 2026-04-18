@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from './application.entity.js';
 import { User } from '../users/user.entity.js';
+import { ApplicantProfile } from '../users/applicant-profile.entity.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { AiMonitoringService } from '../audit-logs/ai-monitoring.service.js';
 
@@ -16,6 +17,8 @@ export class ApplicationsService {
     private repo: Repository<Application>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(ApplicantProfile)
+    private profileRepo: Repository<ApplicantProfile>,
     private jobsService: JobsService,
     private aiMonitoringService: AiMonitoringService,
   ) {}
@@ -45,16 +48,15 @@ export class ApplicationsService {
     }
 
     let finalResumeUrl = data?.resumeUrl;
-    const user = await this.userRepo.findOne({ where: { userId } });
+    const profile = await this.profileRepo.findOne({ where: { userId } });
 
-    if (!finalResumeUrl || finalResumeUrl.trim() === '') {
-      if (user && user.resumeUrl) {
-        finalResumeUrl = user.resumeUrl;
-      }
-    } else {
-      if (user && user.resumeUrl !== finalResumeUrl) {
-        user.resumeUrl = finalResumeUrl;
-        await this.userRepo.save(user);
+    if (finalResumeUrl && finalResumeUrl.trim() !== '') {
+      if (profile && profile.resumeUrl !== finalResumeUrl) {
+        profile.resumeUrl = finalResumeUrl;
+        await this.profileRepo.save(profile);
+      } else if (!profile) {
+        const newProfile = this.profileRepo.create({ userId, resumeUrl: finalResumeUrl });
+        await this.profileRepo.save(newProfile);
       }
     }
 
@@ -88,10 +90,33 @@ export class ApplicationsService {
   }
 
   async findOne(applicationId: number) {
-    return this.repo.findOne({
+    const app = await this.repo.findOne({
       where: { applicationId },
-      relations: ['user', 'job', 'job.company', 'job.category'],
+      relations: ['user', 'user.applicantProfile', 'job', 'job.company', 'job.category'],
     });
+
+    console.log(`🕵️‍♂️ [Backend] findOne(${applicationId}) - user loaded: ${!!app?.user}, profile loaded: ${!!app?.user?.applicantProfile}`);
+
+    if (app && app.user && app.user.applicantProfile) {
+      // Flatten the profile data into the user object for the frontend
+      const p = app.user.applicantProfile;
+      console.log(`🕵️‍♂️ [Backend] Profile data: skills=${p.skills?.length}, bio=${!!p.bio}`);
+      Object.assign(app.user, {
+        bio: p.bio,
+        skills: p.skills,
+        experiences: p.experiences,
+        educations: p.educations,
+        portfolios: p.portfolios,
+        languages: p.languages,
+        socialLinks: p.socialLinks,
+        dob: p.dob,
+        gender: p.gender,
+        experience: p.experienceYears
+      });
+      delete (app.user as any).applicantProfile;
+    }
+
+    return app;
   }
 
   async updateStatus(applicationId: number, status: string, adminId?: string) {

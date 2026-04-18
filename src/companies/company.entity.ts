@@ -87,6 +87,9 @@ export class Company {
   @Column({ name: 'office_photo2_url', type: 'text', nullable: true })
   officePhoto2Url: string;
 
+  @Column({ name: 'official_national_id', length: 50, nullable: true })
+  officialNationalId: string;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

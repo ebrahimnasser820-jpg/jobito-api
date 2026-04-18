@@ -45,8 +45,26 @@ export class RegisterDto {
   contact_email?: string;
 
   @IsOptional()
+  @IsString()
   phone?: string;
 
   @IsOptional()
+  @IsString()
   cr_document_url?: string;
+
+  @IsOptional()
+  @IsString()
+  tax_number?: string;
+
+  @IsOptional()
+  @IsString()
+  commercial_register?: string;
+
+  @IsOptional()
+  @IsString()
+  national_id?: string;
+
+  @IsOptional()
+  @IsString()
+  license_number?: string;
 }

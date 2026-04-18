@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Application } from '../applications/application.entity.js';
+import { ApplicantProfile } from './applicant-profile.entity.js';
 
 @Entity({ schema: 'ptj', name: 'users' })
 export class User {
@@ -26,39 +28,21 @@ export class User {
 
   @Column({ length: 50, nullable: true })
   phone: string;
-
+  //  default: 'student' ==> User ,
   @Column({ length: 50, default: 'student' })
   role: string;
 
   @Column({ length: 100, nullable: true })
   classification: string;
 
-  @Column({ type: 'jsonb', nullable: true })
-  skills: any;
-
-  @Column({ type: 'text', nullable: true })
-  bio: string;
-
-  @Column({ type: 'date', nullable: true })
-  dob: Date;
-
-  @Column({ length: 20, nullable: true })
-  gender: string;
-
-  @Column({ type: 'jsonb', default: [] })
-  experiences: any[];
-
-  @Column({ type: 'jsonb', default: [] })
-  educations: any[];
-
-  @Column({ type: 'jsonb', default: [] })
-  portfolios: any[];
-
-  @Column({ type: 'int', default: 0 })
-  experience: number;
+  @OneToOne(() => ApplicantProfile, (profile) => profile.user)
+  applicantProfile: ApplicantProfile;
 
   @Column({ type: 'numeric', precision: 10, scale: 7, nullable: true })
   latitude: number;
+
+  @Column({ name: 'registration_data', type: 'text', nullable: true })
+  registrationData: string;
 
   @Column({ type: 'numeric', precision: 10, scale: 7, nullable: true })
   longitude: number;
@@ -66,16 +50,7 @@ export class User {
   @Column({ name: 'service_radius_km', type: 'int', default: 10 })
   serviceRadiusKm: number;
 
-  @Column({ type: 'jsonb', default: [] })
-  languages: string[];
 
-  @Column({ name: 'social_links', type: 'jsonb', default: {} })
-  socialLinks: {
-    instagram?: string;
-    twitter?: string;
-    website?: string;
-    linkedin?: string;
-  };
 
   @Column({ name: 'is_phone_verified', default: false })
   isPhoneVerified: boolean;
@@ -89,8 +64,10 @@ export class User {
   @Column({ name: 'avatar_url', type: 'text', nullable: true })
   avatarUrl: string;
 
-  @Column({ name: 'resume_url', type: 'text', nullable: true })
-  resumeUrl: string;
+
+
+  @Column({ name: 'banner_url', type: 'text', nullable: true })
+  banner_url: string;
 
   @Column({ type: 'text', nullable: true })
   location: string;

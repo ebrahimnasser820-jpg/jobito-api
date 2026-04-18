@@ -69,7 +69,6 @@ export class ImagesController {
         return this.imagesService.findByEntity(type, id);
     }
 
-    /** PUT /images/profile — upload/replace current user profile image */
     @Put('profile')
     @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileInterceptor('file', { storage, fileFilter: fileFilterConfig }))
@@ -85,6 +84,24 @@ export class ImagesController {
         @CurrentUser() user: any,
     ) {
         return this.imagesService.setProfileImage(user.sub, file);
+    }
+
+    /** PUT /images/banner — upload/replace current user banner image */
+    @Put('banner')
+    @UseGuards(JwtAuthGuard)
+    @UseInterceptors(FileInterceptor('file', { storage, fileFilter: fileFilterConfig }))
+    setBanner(
+        @UploadedFile(
+            new ParseFilePipe({
+                validators: [
+                    new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+                ],
+            }),
+        )
+        file: Express.Multer.File,
+        @CurrentUser() user: any,
+    ) {
+        return this.imagesService.setBannerImage(user.sub, file);
     }
 
     /** GET /images/profile/:userId — get user profile image */

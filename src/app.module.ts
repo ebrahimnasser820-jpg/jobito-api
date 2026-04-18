@@ -9,7 +9,7 @@ import { AppService } from './app.service.js';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './database/typeorm.config.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
-import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
+import { AutoTranslationInterceptor } from './translations/auto-translatio n.interceptor.js';
 import { winstonConfig } from './common/configs/logger.config.js';
 
 // Feature Modules

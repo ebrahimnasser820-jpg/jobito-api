@@ -91,8 +91,45 @@ export class ImagesService {
 
         const savedImage = await this.repo.save(image);
 
-        // Sync with users table (using CamelCase property)
+        // Sync with users table
         await this.usersService.update(userId, { avatarUrl: savedImage.imageUrl });
+
+        return savedImage;
+    }
+
+    /** Upload / replace user banner image */
+    async setBannerImage(userId: string, file: Express.Multer.File): Promise<Image> {
+        // Remove old banner image
+        const old = await this.repo.findOne({
+            where: {
+                entityType: ImageEntityType.USER,
+                entityId: userId,
+                imageType: ImageType.COVER,
+                isPrimary: true,
+            },
+        });
+
+        if (old) {
+            const oldPath = path.join(process.cwd(), old.imageUrl);
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+            await this.repo.remove(old);
+        }
+
+        const image = this.repo.create({
+            entityType: ImageEntityType.USER,
+            entityId: userId,
+            imageType: ImageType.COVER,
+            imageUrl: `/uploads/images/${file.filename}`,
+            fileSize: file.size,
+            isPrimary: true,
+        });
+
+        const savedImage = await this.repo.save(image);
+
+        // Sync with users table (banner_url)
+        await this.usersService.update(userId, { banner_url: savedImage.imageUrl });
 
         return savedImage;
     }

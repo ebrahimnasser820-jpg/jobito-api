@@ -15,32 +15,44 @@ email         VARCHAR(255) NOT NULL UNIQUE,
 password_hash TEXT NOT NULL,
 phone         VARCHAR(50),
 role          VARCHAR(50) DEFAULT 'student',
-skills        JSONB,
-experience    INT DEFAULT 0,
+classification VARCHAR(100),
 latitude      NUMERIC(10,7),
 longitude     NUMERIC(10,7),
 location_geo  geography(Point,4326),
 location      TEXT,
 service_radius_km INT DEFAULT 10,
-languages     JSONB DEFAULT '[]',
-social_links  JSONB DEFAULT '{}',
 google_id     VARCHAR(255),
 avatar_url    TEXT,
-resume_url    TEXT,
+banner_url    TEXT,
+registration_data TEXT,
 is_phone_verified BOOLEAN DEFAULT FALSE,
 notification_preferences JSONB DEFAULT '{"applications": true, "jobs": false, "recs": false}',
-bio           TEXT,
-dob           DATE,
-gender        VARCHAR(20),
-experiences   JSONB DEFAULT '[]',
-educations    JSONB DEFAULT '[]',
-portfolios    JSONB DEFAULT '[]',
+theme_preference VARCHAR(10) DEFAULT 'light',
+language_preference VARCHAR(10) DEFAULT 'en',
 is_active     BOOLEAN DEFAULT TRUE,
 created_at    TIMESTAMPTZ DEFAULT now(),
 updated_at    TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_users_skills_gin ON users USING GIN (skills);
+CREATE TABLE ptj.applicant_profiles (
+  profile_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
+  resume_url TEXT,
+  bio TEXT,
+  skills JSONB DEFAULT '[]',
+  experience_years INT DEFAULT 0,
+  experiences JSONB DEFAULT '[]',
+  educations JSONB DEFAULT '[]',
+  portfolios JSONB DEFAULT '[]',
+  languages JSONB DEFAULT '[]',
+  social_links JSONB DEFAULT '{}',
+  dob DATE,
+  gender VARCHAR(20),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_applicant_profiles_skills_gin ON ptj.applicant_profiles USING GIN (skills);
 CREATE INDEX idx_users_location_gist ON users USING GIST(location_geo);
 
 CREATE OR REPLACE FUNCTION ptj.users_location_trigger()
@@ -417,11 +429,16 @@ CREATE TABLE ptj.translations (
 INSERT INTO ptj.translations (translation_key, en, ar) VALUES
 ('nav.home', 'Home', 'الرئيسية'),
 ('nav.jobs', 'Find Jobs', 'بحث عن وظائف'),
-('nav.companies', 'Companies', 'الشركات'),
-('nav.about', 'About Us', 'عن الموقع'),
-('nav.contact', 'Contact', 'اتصل بنا'),
+('nav.companies', 'Browse Companies', 'تصفح الشركات'),
+('nav.about', 'About the platform', 'عن المنصة'),
+('nav.contact', 'Contact us', 'اتصل بنا'),
 ('nav.login', 'Login', 'تسجيل الدخول'),
 ('nav.signup', 'Sign Up', 'إنشاء حساب'),
+('nav.dashboard', 'Control panel', 'لوحة التحكم'),
+('nav.profile', 'Profile', 'الملف الشخصي'),
+('nav.messages', 'Messages', 'الرسائل'),
+('nav.joblist', 'Job Listing', 'قائمة الوظائف'),
+('nav.logout', 'Logout', 'تسجيل الخروج'),
 ('common.search', 'Search', 'بحث'),
 ('common.save', 'Save', 'حفظ'),
 ('common.cancel', 'Cancel', 'إلغاء');
