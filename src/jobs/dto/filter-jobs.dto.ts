@@ -29,4 +29,20 @@ export class FilterJobsDto {
     @IsOptional()
     @IsNumberString()
     limit?: string;
+
+    @IsOptional()
+    @IsString()
+    userId?: string;
+
+    @IsOptional()
+    @IsString()
+    classification?: string;
+
+    @IsOptional()
+    @IsString()
+    excludeClassification?: string;
+
+    @IsOptional()
+    @IsString()
+    _t?: string;
 }

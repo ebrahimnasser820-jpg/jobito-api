@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity.js';
 import { ApplicantProfile } from './applicant-profile.entity.js';
 import { UsersService } from './users.service.js';
+import { DeletionCleanupService } from './deletion-cleanup.service.js';
 // import { ChatModule } from '../chat/chat.module.js';
 
 @Module({
@@ -14,7 +15,7 @@ import { UsersService } from './users.service.js';
     // ChatModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, DeletionCleanupService],
   exports: [UsersService, TypeOrmModule],
 })
 export class UsersModule {}

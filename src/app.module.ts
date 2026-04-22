@@ -4,12 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { WinstonModule } from 'nest-winston';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './database/typeorm.config.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
-import { AutoTranslationInterceptor } from './translations/auto-translatio n.interceptor.js';
+import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
 import { winstonConfig } from './common/configs/logger.config.js';
 
 // Feature Modules
@@ -38,6 +39,7 @@ import { TranslationsModule } from './translations/translations.module.js';
       isGlobal: true,
     }),
     WinstonModule.forRoot(winstonConfig),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot(typeOrmConfig),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

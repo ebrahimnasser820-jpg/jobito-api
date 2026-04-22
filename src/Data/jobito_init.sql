@@ -30,6 +30,7 @@ notification_preferences JSONB DEFAULT '{"applications": true, "jobs": false, "r
 theme_preference VARCHAR(10) DEFAULT 'light',
 language_preference VARCHAR(10) DEFAULT 'en',
 is_active     BOOLEAN DEFAULT TRUE,
+deletion_requested_at TIMESTAMPTZ,
 created_at    TIMESTAMPTZ DEFAULT now(),
 updated_at    TIMESTAMPTZ DEFAULT now()
 );
@@ -40,6 +41,7 @@ CREATE TABLE ptj.applicant_profiles (
   resume_url TEXT,
   bio TEXT,
   skills JSONB DEFAULT '[]',
+  services JSONB DEFAULT '[]',
   experience_years INT DEFAULT 0,
   experiences JSONB DEFAULT '[]',
   educations JSONB DEFAULT '[]',
@@ -96,6 +98,8 @@ location_tags   JSONB,
 logo_url        TEXT,
 office_photo1_url TEXT,
 office_photo2_url TEXT,
+classification VARCHAR(100),
+official_national_id VARCHAR(50),
 created_at      TIMESTAMPTZ DEFAULT now()
 );
 
@@ -112,6 +116,7 @@ CREATE TYPE ptj_job_type AS ENUM ('part-time','one-time','event','freelance','in
 CREATE TABLE jobs (
 job_id        BIGSERIAL PRIMARY KEY,
 company_id    BIGINT REFERENCES companies(company_id) ON DELETE CASCADE,
+user_id       UUID REFERENCES users(user_id) ON DELETE CASCADE,
 category_id   BIGINT REFERENCES categories(category_id) ON DELETE SET NULL,
 title         VARCHAR(255) NOT NULL,
 title_en      VARCHAR(255),
@@ -130,9 +135,16 @@ slots_available INT DEFAULT 1,
 price_type    VARCHAR(50) DEFAULT 'fixed',
 is_negotiable BOOLEAN DEFAULT FALSE,
 is_active     BOOLEAN DEFAULT TRUE,
+work_time     JSONB,
+images        JSONB,
+skills        JSONB DEFAULT '[]',
 expires_at    TIMESTAMPTZ,
 created_at    TIMESTAMPTZ DEFAULT now(),
-updated_at    TIMESTAMPTZ DEFAULT now()
+updated_at    TIMESTAMPTZ DEFAULT now(),
+CONSTRAINT chk_job_owner CHECK (
+  (company_id IS NOT NULL AND user_id IS NULL) OR
+  (company_id IS NULL AND user_id IS NOT NULL)
+)
 );
 
 CREATE FUNCTION ptj.jobs_location_trigger() RETURNS trigger AS $$
@@ -444,4 +456,3 @@ INSERT INTO ptj.translations (translation_key, en, ar) VALUES
 ('common.cancel', 'Cancel', 'إلغاء');
 
 CREATE INDEX idx_translations_en ON ptj.translations (en);
-

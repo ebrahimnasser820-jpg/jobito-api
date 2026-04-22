@@ -24,4 +24,8 @@ export class FilterCompaniesDto {
   @IsOptional()
   @IsNumberString()
   limit?: string;
+
+  @IsOptional()
+  @IsString()
+  _t?: string;
 }

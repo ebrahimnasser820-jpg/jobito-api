@@ -45,6 +45,9 @@ export class ApplicantProfile {
   @Column({ type: 'jsonb', default: [] })
   languages: string[];
 
+  @Column({ type: 'jsonb', default: [] })
+  services: string[];
+
   @Column({ name: 'social_links', type: 'jsonb', default: {} })
   socialLinks: {
     instagram?: string;

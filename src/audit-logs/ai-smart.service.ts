@@ -343,7 +343,13 @@ export class AiSmartService {
 
 
   // ─── 4. Smart Search with Scoring ──────────────────────────
-  async smartSearch(query: string, filters?: { location?: string; jobType?: string; categoryId?: string }): Promise<{
+  async smartSearch(query: string, filters?: { 
+    location?: string; 
+    jobType?: string; 
+    categoryId?: string;
+    classification?: string;
+    excludeClassification?: string;
+  }): Promise<{
     data: any[];
     query: string;
     expandedTags: string[];
@@ -353,14 +359,22 @@ export class AiSmartService {
     const expandedTags = this.expandQuery(query);
 
     // Fetch all active jobs with application counts
-    const allJobs = await this.jobRepo.createQueryBuilder('job')
+    const qb = this.jobRepo.createQueryBuilder('job')
       .leftJoinAndSelect('job.company', 'company')
       .leftJoinAndSelect('job.category', 'category')
       .leftJoin('job.applications', 'applications')
       .addSelect(['applications.applicationId'])
-      .where('job.isActive = :isActive', { isActive: true })
-      .orderBy('job.createdAt', 'DESC')
-      .getMany();
+      .where('job.isActive = :isActive', { isActive: true });
+
+    // Apply strict classification filters at query level
+    if (filters?.classification) {
+      qb.andWhere('job.classification = :classification', { classification: filters.classification });
+    }
+    if (filters?.excludeClassification) {
+      qb.andWhere('job.classification != :excludeCls', { excludeCls: filters.excludeClassification });
+    }
+
+    const allJobs = await qb.orderBy('job.createdAt', 'DESC').getMany();
 
     // Score each job
     const scored = allJobs.map(job => {

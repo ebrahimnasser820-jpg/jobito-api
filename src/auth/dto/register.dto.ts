@@ -12,10 +12,10 @@ export class RegisterDto {
   confirmPassword?: string;
 
   @IsOptional()
-  @IsIn(['student', 'company'])
-  role?: 'student' | 'company';
+  @IsIn(['user', 'company', 'student', 'admin'])
+  role?: string;
 
-  // Student fields — accept both full_name and fullName from frontend
+  // User fields — accept both full_name and fullName from frontend
   @IsOptional()
   @IsNotEmpty()
   full_name?: string;

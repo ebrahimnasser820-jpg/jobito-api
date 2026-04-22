@@ -1,0 +1,71 @@
+{
+	"info": {
+		"name": "Jobito API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password\"\n}",
+							"options": { "cache": { "raw": { "language": "json" } } }
+						},
+						"url": { "raw": "{{baseUrl}}/auth/login" }
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"url": { "raw": "{{baseUrl}}/auth/refresh-token" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Jobs",
+			"item": [
+				{
+					"name": "Featured Jobs",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/jobs/Featured" }
+					}
+				},
+				{
+					"name": "Search (Smart)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/ai/smart-search?q=developer" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Applications",
+			"item": [
+				{
+					"name": "My Applications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+						],
+						"url": { "raw": "{{baseUrl}}/applications/my" }
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "https://jobito-api.onrender.com" },
+		{ "key": "token", "value": "" }
+	]
+}

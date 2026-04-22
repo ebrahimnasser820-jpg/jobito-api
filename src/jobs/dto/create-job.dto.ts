@@ -30,7 +30,11 @@ export class CreateJobDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  companyId?: number;
+  companyId?: number | null;
+
+  @IsOptional()
+  @IsString()
+  userId?: string | null;
 
   @IsOptional()
   @Type(() => Number)
@@ -94,6 +98,19 @@ export class CreateJobDto {
   @IsOptional()
   @IsString()
   classification?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  skills?: string[];
+
+  @IsOptional()
+  workTime?: string[];
+
+  @IsOptional()
+  images?: string[];
 
   @IsOptional()
   benefits?: any;

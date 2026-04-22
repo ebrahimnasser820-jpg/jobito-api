@@ -181,6 +181,7 @@ export class JobsService {
         .createQueryBuilder('job')
         .leftJoinAndSelect('job.company', 'company')
         .leftJoinAndSelect('job.category', 'category')
+        .leftJoinAndSelect('job.user', 'user')
         .leftJoin('job.applications', 'applications')
         .addSelect(['applications.applicationId']);
 
@@ -189,6 +190,10 @@ export class JobsService {
       if (filters.companyId && !isNaN(parseInt(filters.companyId))) {
         qb.andWhere('job.companyId = :compId', {
           compId: parseInt(filters.companyId),
+        });
+      } else if (filters.userId) {
+        qb.andWhere('job.userId = :userId', {
+          userId: filters.userId,
         });
       } else {
         qb.andWhere('job.isActive = :active', { active: true });
@@ -211,7 +216,7 @@ export class JobsService {
         );
       }
 
-      qb.orderBy('job.createdAt', 'DESC');
+      qb.orderBy('job.updatedAt', 'DESC');
       
       if (filters.location) {
         qb.andWhere('LOWER(job.address) LIKE LOWER(:location)', { 
@@ -226,6 +231,18 @@ export class JobsService {
       if (filters.categoryId && !isNaN(parseInt(filters.categoryId))) {
         qb.andWhere('job.categoryId = :catId', {
           catId: parseInt(filters.categoryId),
+        });
+      }
+
+      if (filters.classification) {
+        qb.andWhere('job.classification = :classification', {
+          classification: filters.classification,
+        });
+      }
+
+      if (filters.excludeClassification) {
+        qb.andWhere('job.classification != :excludeCls', {
+          excludeCls: filters.excludeClassification,
         });
       }
 
@@ -256,6 +273,11 @@ export class JobsService {
             categoryId: j.category.categoryId, 
             name: j.category.name 
           } : undefined,
+          user: j.user ? {
+            userId: j.user.userId,
+            fullName: j.user.fullName,
+            avatarUrl: j.user.avatarUrl
+          } : undefined,
           appliedCount: Array.isArray(j.applications) ? j.applications.length : 0
         })),
         total,
@@ -285,7 +307,7 @@ export class JobsService {
   async findOne(id: number) {
     const job = await this.repo.findOne({
       where: { jobId: id },
-      relations: ['company', 'category', 'applications'],
+      relations: ['company', 'category', 'user', 'applications'],
     });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -304,6 +326,14 @@ export class JobsService {
         );
       }
       data.categoryId = category.categoryId;
+    }
+
+    // Ownership Validation
+    if (!data.companyId && !data.userId) {
+      throw new Error('A job must have exactly one owner: either companyId or userId.');
+    }
+    if (data.companyId && data.userId) {
+      throw new Error('A job cannot have both companyId and userId owners.');
     }
     const job = this.repo.create(data);
     const saved = await this.repo.save(job);
@@ -377,7 +407,7 @@ export class JobsService {
           ...(job.categoryId && { categoryId: job.categoryId }),
           isActive: true,
         },
-        relations: ['company', 'category'],
+        relations: ['company', 'category', 'user'],
         take: 4,
       })
       .then((jobs) => jobs.filter((j) => Number(j.jobId) !== id));

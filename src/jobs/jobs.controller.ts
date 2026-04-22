@@ -20,6 +20,7 @@ import { UpdateJobDto } from './dto/update-job.dto.js';
 import { FilterJobsDto } from './dto/filter-jobs.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
+import { AccountDeletionGuard } from '../common/guards/account-deletion.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 
 @Controller('jobs')
@@ -68,25 +69,35 @@ export class JobsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company')
+  @UseGuards(JwtAuthGuard, RolesGuard, AccountDeletionGuard)
+  @Roles('company', 'student')
   async create(@Body() dto: CreateJobDto, @Req() req: any) {
     const user = req.user as any;
-    const userEmail = user.email;
-    const company = await this.companiesService.findByContactEmailOrName(userEmail);
-    if (!company) {
-      throw new NotFoundException(
-        'Associated company profile not found for this user',
-      );
-    }
-    // Override the companyId with the authentic user's company
-    dto.companyId = company.companyId;
 
-    if (dto.benefits) {
-      await this.companiesService.update(company.companyId, {
-        benefits: dto.benefits,
-      });
-      delete dto.benefits;
+    if (user.role === 'student' && user.classification !== 'tradesman') {
+      throw new ForbiddenException('Only tradesmen or companies can post jobs');
+    }
+
+    if (user.role === 'company') {
+      const company = await this.companiesService.findByContactEmailOrName(user.email);
+      if (!company) {
+        throw new NotFoundException(
+          'Associated company profile not found for this user',
+        );
+      }
+      dto.companyId = company.companyId;
+      dto.userId = null;
+
+      if (dto.benefits) {
+        await this.companiesService.update(company.companyId, {
+          benefits: dto.benefits,
+        });
+        delete dto.benefits;
+      }
+    } else {
+      // Tradesman
+      dto.userId = user.userId || user.sub;
+      dto.companyId = null;
     }
 
     return this.jobsService.create(dto);
@@ -94,43 +105,63 @@ export class JobsController {
 
   @Post('bulk')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company')
+  @Roles('company', 'student')
   async createBulk(@Body() dto: CreateJobDto[], @Req() req: any) {
-    const userEmail = req.user.email;
-    const company = await this.companiesService.findByContactEmailOrName(userEmail);
-    if (!company) {
-      throw new NotFoundException('Associated company profile not found for this user');
+    const user = req.user as any;
+
+    if (user.role === 'student' && user.classification !== 'tradesman') {
+      throw new ForbiddenException('Only tradesmen or companies can post jobs');
     }
-    // Override the company_id for all jobs
-    dto.forEach((job) => (job.companyId = company.companyId));
+
+    if (user.role === 'company') {
+      const company = await this.companiesService.findByContactEmailOrName(user.email);
+      if (!company) {
+        throw new NotFoundException('Associated company profile not found for this user');
+      }
+      dto.forEach((job) => {
+        job.companyId = company.companyId;
+        job.userId = null;
+      });
+    } else {
+      const userId = user.userId || user.sub;
+      dto.forEach((job) => {
+        job.userId = userId;
+        job.companyId = null;
+      });
+    }
     return this.jobsService.createBulk(dto);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company')
+  @UseGuards(JwtAuthGuard, RolesGuard, AccountDeletionGuard)
+  @Roles('company', 'student')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateJobDto,
     @Req() req: any,
   ) {
     const user = req.user as any;
-    const userEmail = user.email;
-    const company = await this.companiesService.findByContactEmailOrName(userEmail);
-    if (!company) {
-      throw new NotFoundException('Company profile not found');
-    }
-
     const job = await this.jobsService.findOne(id);
-    if (Number(job.companyId) !== Number(company.companyId)) {
-      throw new ForbiddenException('You are not authorized to edit this job');
+
+    let isAuthorized = false;
+    if (user.role === 'company') {
+      const company = await this.companiesService.findByContactEmailOrName(user.email);
+      if (company && Number(job.companyId) === Number(company.companyId)) {
+        isAuthorized = true;
+        if (dto.benefits) {
+          await this.companiesService.update(company.companyId, { benefits: dto.benefits });
+          delete dto.benefits;
+        }
+      }
+    } else if (user.role === 'student' && user.classification === 'tradesman') {
+      const userId = user.userId || user.sub;
+      if (job.userId === userId) {
+        isAuthorized = true;
+      }
     }
 
-    if (dto.benefits) {
-      await this.companiesService.update(company.companyId, {
-        benefits: dto.benefits,
-      });
-      delete dto.benefits;
+    if (!isAuthorized) {
+      throw new ForbiddenException('You are not authorized to edit this job');
     }
 
     return this.jobsService.update(id, dto);
@@ -150,16 +181,25 @@ export class JobsController {
 
   @Get(':id/analytics')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company')
+  @Roles('company', 'student')
   async getAnalytics(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userEmail = req.user.email;
-    const company = await this.companiesService.findByContactEmailOrName(userEmail);
-    if (!company) {
-      throw new NotFoundException('Company profile not found');
+    const user = req.user as any;
+    const job = await this.jobsService.findOne(id);
+
+    let isAuthorized = false;
+    if (user.role === 'company') {
+      const company = await this.companiesService.findByContactEmailOrName(user.email);
+      if (company && Number(job.companyId) === Number(company.companyId)) {
+        isAuthorized = true;
+      }
+    } else if (user.role === 'student' && user.classification === 'tradesman') {
+      const userId = user.userId || user.sub;
+      if (job.userId === userId) {
+        isAuthorized = true;
+      }
     }
 
-    const job = await this.jobsService.findOne(id);
-    if (Number(job.companyId) !== Number(company.companyId)) {
+    if (!isAuthorized) {
       throw new ForbiddenException('You are not authorized to view analytics for this job');
     }
 
@@ -167,18 +207,26 @@ export class JobsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company')
+  @UseGuards(JwtAuthGuard, RolesGuard, AccountDeletionGuard)
+  @Roles('company', 'student')
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     const user = req.user as any;
-    const userEmail = user.email;
-    const company = await this.companiesService.findByContactEmailOrName(userEmail);
-    if (!company) {
-      throw new NotFoundException('Company profile not found');
+    const job = await this.jobsService.findOne(id);
+
+    let isAuthorized = false;
+    if (user.role === 'company') {
+      const company = await this.companiesService.findByContactEmailOrName(user.email);
+      if (company && Number(job.companyId) === Number(company.companyId)) {
+        isAuthorized = true;
+      }
+    } else if (user.role === 'student' && user.classification === 'tradesman') {
+      const userId = user.userId || user.sub;
+      if (job.userId === userId) {
+        isAuthorized = true;
+      }
     }
 
-    const job = await this.jobsService.findOne(id);
-    if (Number(job.companyId) !== Number(company.companyId)) {
+    if (!isAuthorized) {
       throw new ForbiddenException('You are not authorized to delete this job');
     }
 

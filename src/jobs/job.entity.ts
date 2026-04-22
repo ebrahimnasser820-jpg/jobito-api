@@ -9,6 +9,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Company } from '../companies/company.entity.js';
+import { User } from '../users/user.entity.js';
 import { Category } from './category.entity.js';
 import { Application } from '../applications/application.entity.js';
 
@@ -28,12 +29,19 @@ export class Job {
   @PrimaryGeneratedColumn({ name: 'job_id', type: 'bigint' })
   jobId: number;
 
-  @ManyToOne(() => Company, (company) => company.jobs)
+  @ManyToOne(() => Company, (company) => company.jobs, { nullable: true })
   @JoinColumn({ name: 'company_id' })
   company: Company;
 
   @Column({ name: 'company_id', type: 'bigint', nullable: true })
   companyId: number | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @Column({ name: 'user_id', type: 'uuid', nullable: true })
+  userId: string | null;
 
   @ManyToOne(() => Category, (category) => category.jobs, { nullable: true })
   @JoinColumn({ name: 'category_id' })
@@ -112,6 +120,15 @@ export class Job {
 
   @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
   expiresAt: Date;
+
+  @Column({ name: 'work_time', type: 'json', nullable: true })
+  workTime: string[];
+
+  @Column({ name: 'images', type: 'json', nullable: true })
+  images: string[];
+
+  @Column({ type: 'jsonb', nullable: true, default: [] })
+  skills: string[];
 
   @OneToMany(() => Application, (app) => app.job)
   applications: Application[];

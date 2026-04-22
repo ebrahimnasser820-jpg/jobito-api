@@ -11,6 +11,15 @@ import { JobType } from '../job.entity.js';
 
 export class UpdateJobDto {
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  companyId?: number | null;
+
+  @IsOptional()
+  @IsString()
+  userId?: string | null;
+
+  @IsOptional()
   @IsString()
   title?: string;
 

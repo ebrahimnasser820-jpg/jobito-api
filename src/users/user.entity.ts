@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Application } from '../applications/application.entity.js';
+import { Job } from '../jobs/job.entity.js';
 import { ApplicantProfile } from './applicant-profile.entity.js';
 
 @Entity({ schema: 'ptj', name: 'users' })
@@ -26,10 +27,10 @@ export class User {
   @Column({ name: 'password_hash', type: 'text', nullable: true })
   passwordHash: string;
 
-  @Column({ length: 50, nullable: true })
-  phone: string;
-  //  default: 'student' ==> User ,
-  @Column({ length: 50, default: 'student' })
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone: string | null;
+  //  default: 'user' ==> User ,
+  @Column({ length: 50, default: 'user' })
   role: string;
 
   @Column({ length: 100, nullable: true })
@@ -58,8 +59,8 @@ export class User {
   @Column({ name: 'notification_preferences', type: 'jsonb', default: { applications: true, jobs: false, recs: false } })
   notificationPreferences: { applications: boolean; jobs: boolean; recs: boolean };
 
-  @Column({ name: 'google_id', length: 255, nullable: true })
-  googleId: string;
+  @Column({ name: 'google_id', type: 'varchar', length: 255, nullable: true })
+  googleId: string | null;
 
   @Column({ name: 'avatar_url', type: 'text', nullable: true })
   avatarUrl: string;
@@ -78,6 +79,9 @@ export class User {
   @Column({ name: 'language_preference', length: 10, default: 'en' })
   languagePreference: string;
 
+  @Column({ name: 'deletion_requested_at', type: 'timestamptz', nullable: true })
+  deletionRequestedAt: Date | null;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
@@ -89,4 +93,7 @@ export class User {
 
   @OneToMany(() => Application, (app) => app.user)
   applications: Application[];
+
+  @OneToMany(() => Job, (job) => job.user)
+  jobs: Job[];
 }

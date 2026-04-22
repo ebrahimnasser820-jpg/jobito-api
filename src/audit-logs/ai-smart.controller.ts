@@ -16,12 +16,20 @@ export class AiSmartController {
     @Query('location') location?: string,
     @Query('jobType') jobType?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('classification') classification?: string,
+    @Query('excludeClassification') excludeClassification?: string,
   ) {
     if (!query || query.trim() === '') {
       return { data: [], query: '', expandedTags: [], total: 0, message: 'Please provide a search query' };
     }
 
-    const result = await this.aiSmartService.smartSearch(query, { location, jobType, categoryId });
+    const result = await this.aiSmartService.smartSearch(query, { 
+      location, 
+      jobType, 
+      categoryId,
+      classification,
+      excludeClassification
+    });
     return result;
   }
 

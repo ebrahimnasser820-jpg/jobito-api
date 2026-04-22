@@ -33,6 +33,9 @@ export class Application {
   @Column({ name: 'portfolio_url', type: 'text', nullable: true })
   portfolioUrl: string;
 
+  @Column({ name: 'address', type: 'text', nullable: true })
+  address: string;
+
   @Column({ name: 'cover_letter', type: 'text', nullable: true })
   coverLetter: string;
 

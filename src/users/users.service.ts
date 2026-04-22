@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Injectable, Logger } from '@nestjs/common';
+import { Repository, LessThan } from 'typeorm';
 import { User } from './user.entity.js';
 import { ApplicantProfile } from './applicant-profile.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -48,7 +48,7 @@ export class UsersService {
   async update(userId: string, data: Partial<User> & Partial<ApplicantProfile>) {
     const {
       skills, bio, dob, gender, experiences, educations, portfolios,
-      experienceYears, languages, socialLinks, resumeUrl,
+      experienceYears, languages, services, socialLinks, resumeUrl,
       ...userData
     } = data as any;
 
@@ -56,7 +56,7 @@ export class UsersService {
       await this.usersRepository.update(userId, userData);
     }
 
-    const profileData = { skills, bio, dob, gender, experiences, educations, portfolios, experienceYears, languages, socialLinks, resumeUrl };
+    const profileData = { skills, bio, dob, gender, experiences, educations, portfolios, experienceYears, languages, services, socialLinks, resumeUrl };
     
     // Remove undefined properties from profileData
     Object.keys(profileData).forEach(key => profileData[key] === undefined ? delete profileData[key] : {});
@@ -90,5 +90,40 @@ export class UsersService {
       return await this.usersRepository.remove(user);
     }
     return null;
+  }
+
+  private readonly logger = new Logger(UsersService.name);
+
+  async processExpiredDeletions() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const expiredUsers = await this.usersRepository.find({
+      where: {
+        deletionRequestedAt: LessThan(sevenDaysAgo),
+        isActive: true,
+      },
+    });
+
+    if (expiredUsers.length === 0) return;
+
+    this.logger.log(`Processing ${expiredUsers.length} expired account deletions...`);
+
+    for (const user of expiredUsers) {
+      try {
+        // Soft delete strategy: deactivate and scrub PII
+        await this.usersRepository.update(user.userId, {
+          isActive: false,
+          deletionRequestedAt: null,
+          fullName: 'Deleted User',
+          email: `deleted_${user.userId}@jobito.com`, // Anonymize email
+          phone: null,
+          googleId: null,
+        });
+        this.logger.log(`Account ${user.userId} has been processed for deletion.`);
+      } catch (error) {
+        this.logger.error(`Failed to process deletion for user ${user.userId}: ${error.message}`);
+      }
+    }
   }
 }

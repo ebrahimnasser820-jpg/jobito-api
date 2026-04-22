@@ -115,10 +115,10 @@ export class AuthService {
     }
 
     const hash = await bcrypt.hash(data.password, 10);
-    const role = data.role || 'student';
+    const role = data.role || 'user';
     
-    if (role !== 'student' && role !== 'company') {
-      throw new BadRequestException('Invalid role. Must be student or company.');
+    if (role !== 'user' && role !== 'company' && role !== 'student') {
+      throw new BadRequestException('Invalid role. Must be user, company, or student.');
     }
 
     let user;
@@ -188,7 +188,7 @@ export class AuthService {
             await this.companiesService.create({
               name: registrationData.name || registrationData.companyName || user.fullName,
               contactEmail: user.email,
-              phone: user.phone,
+              phone: user.phone || undefined,
               address: registrationData.address || registrationData.companyAddress,
               crDocumentUrl: registrationData.cr_document_url || registrationData.commercial_register,
               taxId: registrationData.tax_number || registrationData.taxNumber,
@@ -206,6 +206,22 @@ export class AuthService {
           isActive: true,
           registrationData: "" // Clear staging
         });
+
+        // 4. Initialize Profile for individual users (if not company)
+        if (user.role === 'user' || user.role === 'student') {
+          try {
+            const registrationData = user.registrationData ? JSON.parse(user.registrationData) : {};
+            await this.usersService.update(user.userId, {
+              classification: registrationData.classification || 'job_seeker',
+              location: registrationData.location || '',
+              bio: '', // Initial empty bio
+              skills: [],
+            });
+            this.logger.info(`✅ Initial individual profile prepared for ${email}`);
+          } catch (profileErr) {
+            this.logger.warn(`Could not initialize individual profile for ${email}: ${profileErr.message}`);
+          }
+        }
 
         return { message: 'Email verified and profile activated successfully!' };
       } catch (err) {
@@ -267,6 +283,7 @@ export class AuthService {
 
       gender: user.applicantProfile?.gender || null,
       location: user.location || null,
+      classification: user.classification || null,
       notificationPreferences: user.notificationPreferences || null,
     };
 
@@ -353,7 +370,7 @@ export class AuthService {
           passwordHash: hash,
           googleId: googleId,
           avatarUrl: picture,
-          role: 'student',
+          role: 'user',
           isActive: true,
         });
       } else {
@@ -378,7 +395,9 @@ export class AuthService {
         phone: user.phone || null,
         gender: user.applicantProfile?.gender || null,
         location: user.location || null,
+        classification: user.classification || null,
         notificationPreferences: user.notificationPreferences || null,
+        deletionRequestedAt: user.deletionRequestedAt || null,
       };
 
       return {
@@ -449,7 +468,9 @@ export class AuthService {
 
       gender: user.applicantProfile?.gender || null,
       location: user.location || null,
+      classification: user.classification || null,
       notificationPreferences: user.notificationPreferences || null,
+      deletionRequestedAt: user.deletionRequestedAt || null,
     };
 
     return {

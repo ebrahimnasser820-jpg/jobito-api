@@ -1,5 +1,6 @@
 import { Controller, Get, Put, Patch, Delete, Body, UseGuards, Request, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
+import { AccountDeletionGuard } from '../common/guards/account-deletion.guard.js';
 import { UsersService } from './users.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import * as bcrypt from 'bcryptjs';
@@ -41,7 +42,7 @@ export class UsersController {
         };
     }
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, AccountDeletionGuard)
     @Put('me')
     async updateProfile(@Request() req, @Body() body: any) {
         const userId = req.user.sub;
@@ -68,6 +69,7 @@ export class UsersController {
         if (body.portfolios !== undefined) updateData.portfolios = body.portfolios;
         if (body.socialLinks !== undefined) updateData.socialLinks = body.socialLinks;
         if (body.languages !== undefined) updateData.languages = body.languages;
+        if (body.services !== undefined) updateData.services = body.services;
         if (body.location !== undefined) updateData.location = body.location;
         if (body.themePreference !== undefined) updateData.themePreference = body.themePreference;
         if (body.languagePreference !== undefined) updateData.languagePreference = body.languagePreference;
@@ -87,7 +89,7 @@ export class UsersController {
         };
     }
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, AccountDeletionGuard)
     @Patch('me/theme')
     async updateTheme(@Request() req, @Body() body: { theme: 'light' | 'dark' }) {
         const userId = req.user.sub;
@@ -115,7 +117,7 @@ export class UsersController {
         return { message: 'Language updated', language };
     }
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, AccountDeletionGuard)
     @Put('me/password')
     async updatePassword(@Request() req, @Body() body: any) {
         const userId = req.user.sub;
@@ -147,13 +149,72 @@ export class UsersController {
         return { message: 'Password updated successfully' };
     }
 
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, AccountDeletionGuard)
     @Delete('me')
     async deleteAccount(@Request() req) {
         const userId = req.user.sub;
-        // Soft delete
-        await this.usersService.update(userId, { isActive: false });
-        return { message: 'Account deactivated successfully' };
+        const user = await this.usersService.findById(userId);
+        if (!user) throw new BadRequestException('User not found');
+
+        if (user.deletionRequestedAt) {
+            return { message: 'Account deletion already scheduled', deletionRequestedAt: user.deletionRequestedAt };
+        }
+
+        // Schedule deletion in 7 days — don't deactivate yet
+        await this.usersService.update(userId, {
+            deletionRequestedAt: new Date(),
+        });
+
+        const deleteDate = new Date();
+        deleteDate.setDate(deleteDate.getDate() + 7);
+
+        return {
+            message: 'Account scheduled for deletion. You have 7 days to cancel.',
+            deletionRequestedAt: new Date(),
+            permanentDeleteAt: deleteDate,
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch('me/cancel-deletion')
+    async cancelDeletion(@Request() req) {
+        const userId = req.user.sub;
+        const user = await this.usersService.findById(userId);
+        if (!user) throw new BadRequestException('User not found');
+
+        if (!user.deletionRequestedAt) {
+            return { message: 'No deletion request found' };
+        }
+
+        await this.usersService.update(userId, {
+            deletionRequestedAt: null,
+            isActive: true,
+        });
+
+        return { message: 'Account deletion cancelled successfully' };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('me/deletion-status')
+    async getDeletionStatus(@Request() req) {
+        const userId = req.user.sub;
+        const user = await this.usersService.findById(userId);
+        if (!user) throw new BadRequestException('User not found');
+
+        if (!user.deletionRequestedAt) {
+            return { scheduled: false };
+        }
+
+        const deleteDate = new Date(user.deletionRequestedAt);
+        deleteDate.setDate(deleteDate.getDate() + 7);
+        const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+        return {
+            scheduled: true,
+            deletionRequestedAt: user.deletionRequestedAt,
+            permanentDeleteAt: deleteDate,
+            daysLeft,
+        };
     }
 }
 

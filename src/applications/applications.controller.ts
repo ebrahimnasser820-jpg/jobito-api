@@ -7,10 +7,12 @@ import {
     UseGuards,
     ParseIntPipe,
     Delete,
+    Patch,
 } from '@nestjs/common';
 import { ApplicationsService } from './applications.service.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
+import { AccountDeletionGuard } from '../common/guards/account-deletion.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/user.decorator.js';
 
@@ -27,16 +29,17 @@ export class ApplicationsController {
   constructor(private applicationsService: ApplicationsService) {}
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, AccountDeletionGuard)
   @Roles('student')
   apply(
     @Body('job_id') jobId: number,
     @Body('portfolioUrl') portfolioUrl: string,
+    @Body('address') address: string,
     @Body('coverLetter') coverLetter: string,
     @Body('resumeUrl') resumeUrl: string,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.applicationsService.apply(user.sub, jobId, { portfolioUrl, coverLetter, resumeUrl });
+    return this.applicationsService.apply(user.sub, jobId, { portfolioUrl, address, coverLetter, resumeUrl });
   }
 
   @Get('my')
@@ -48,30 +51,38 @@ export class ApplicationsController {
 
   @Get('job/:jobId')
   @UseGuards(RolesGuard)
-  @Roles('company')
-  getJobApplications(@Param('jobId', ParseIntPipe) jobId: number) {
-    return this.applicationsService.getJobApplications(jobId);
+  @Roles('company', 'student')
+  getJobApplications(
+    @Param('jobId', ParseIntPipe) jobId: number,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.applicationsService.getJobApplications(jobId, user.sub, user.role || "");
   }
 
   @Get(':id')
   @UseGuards(RolesGuard)
-  @Roles('company')
-  async getApplication(@Param('id', ParseIntPipe) id: number) {
-    const app = await this.applicationsService.findOne(id);
+  @Roles('company', 'student')
+  async getApplication(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: RequestUser,
+  ) {
+    const app = await this.applicationsService.findOne(id, user.sub, user.role || "");
     if (!app) {
       throw new Error('Application not found');
     }
     return app;
   }
 
-  @Post(':id/status')
+  @Patch(':id/status')
+  @Post(':id/status') // Support both for robustness
   @UseGuards(RolesGuard)
-  @Roles('company')
+  @Roles('company', 'student')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,
     @CurrentUser() user: RequestUser,
   ) {
+    console.log(`📥 [Controller] updateStatus for ID: ${id}, Status: ${status}, User: ${user.sub}`);
     return this.applicationsService.updateStatus(id, status, user.sub);
   }
 
@@ -89,7 +100,7 @@ export class ApplicationsController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('company')
+  @Roles('company', 'student')
   deleteApplication(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: RequestUser,
