@@ -175,7 +175,6 @@ export class JobsController {
     @Req() req: any
   ) {
     const userId = req.user?.userId || req.user?.sub || req.user?.id; 
-    console.log(`[JobsController] 📈 Recording view for Job #${id} by User ${userId}`);
     return this.jobsService.recordView(id, userId, sessionId);
   }
 

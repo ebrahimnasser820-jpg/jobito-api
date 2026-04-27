@@ -13,7 +13,7 @@ export class DashboardService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl = this.configService.get<string>('DASHBOARD_API_URL') || 'https://localhost:7196';
+    this.baseUrl = this.configService.get<string>('DASHBOARD_API_URL') || 'http://localhost:5200';
     this.apiKey = this.configService.get<string>('DASHBOARD_API_KEY') || '';
   }
 

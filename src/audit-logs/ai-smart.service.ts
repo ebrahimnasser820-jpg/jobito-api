@@ -411,8 +411,11 @@ export class AiSmartService {
           return null; // filter out
         }
       }
-      if (filters?.jobType && job.jobType !== filters.jobType) {
-        return null;
+      if (filters?.jobType) {
+        const isMatched = Array.isArray(job.jobType) 
+          ? job.jobType.includes(filters.jobType)
+          : job.jobType === filters.jobType;
+        if (!isMatched) return null;
       }
       if (filters?.categoryId && job.categoryId !== parseInt(filters.categoryId)) {
         return null;

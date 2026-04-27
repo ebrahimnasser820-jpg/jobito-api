@@ -8,9 +8,11 @@ import { JobsController } from './jobs.controller.js';
 import { CompaniesModule } from '../companies/companies.module.js';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
 
+import { AuditLog } from '../audit-logs/audit-log.entity.js';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Job, Category]),
+    TypeOrmModule.forFeature([Job, Category, AuditLog]),
     CompaniesModule,
     AuditLogsModule,
   ],

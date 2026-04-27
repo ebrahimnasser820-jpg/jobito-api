@@ -8,6 +8,7 @@ import { UpdateJobDto } from './dto/update-job.dto.js';
 import { FilterJobsDto } from './dto/filter-jobs.dto.js';
 import { AiSmartService } from '../audit-logs/ai-smart.service.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
+import { CompaniesService } from '../companies/companies.service.js';
 
 @Injectable()
 export class JobsService {
@@ -20,6 +21,7 @@ export class JobsService {
     private auditLogRepo: Repository<AuditLog>,
     private dataSource: DataSource,
     private aiSmartService: AiSmartService,
+    private companiesService: CompaniesService,
   ) {}
 
   async findAllCategories() {
@@ -41,29 +43,15 @@ export class JobsService {
         .where('classification IN (:...oldClasses)', { oldClasses: ['حرفي', 'صنيعي', 'خددمات'] })
         .execute();
 
-      // Ensure each allowed name exists
+      // Ensure each allowed name exists (Core categories for filtering)
       for (const name of allowedNames) {
         const existing = await this.categoryRepo.findOne({ where: { name } });
         if (!existing) {
-          console.log(`[Categories] Creating missing category: ${name}`);
+          console.log(`[Categories] Creating missing core category: ${name}`);
           await this.categoryRepo.save(this.categoryRepo.create({ 
             name, 
             nameEn: name === 'تقني' ? 'Tech' : name === 'غير تقني' ? 'Non-Tech' : 'Services' 
           }));
-        }
-      }
-
-      // Cleanup: Delete any categories that are NOT in the allowed list
-      const allCurrent = await this.categoryRepo.find();
-      for (const c of allCurrent) {
-        if (!allowedNames.includes(c.name.trim())) {
-          console.log(`[Categories] Deleting unwanted category: ${c.name}`);
-          await this.repo.createQueryBuilder()
-            .update(Job)
-            .set({ categoryId: null })
-            .where('categoryId = :id', { id: c.categoryId })
-            .execute();
-          await this.categoryRepo.delete(c.categoryId);
         }
       }
 
@@ -171,7 +159,6 @@ export class JobsService {
   }
 
   async findAll(filters: FilterJobsDto) {
-    console.log('🔍 [JobsService.findAll] DB QUERY with filters:', JSON.stringify(filters));
     try {
       const page = parseInt(filters.page || '1') || 1;
       const limit = parseInt(filters.limit || '10') || 10;
@@ -181,9 +168,10 @@ export class JobsService {
         .createQueryBuilder('job')
         .leftJoinAndSelect('job.company', 'company')
         .leftJoinAndSelect('job.category', 'category')
+        .leftJoinAndSelect('job.categories', 'categories')
         .leftJoinAndSelect('job.user', 'user')
         .leftJoin('job.applications', 'applications')
-        .addSelect(['applications.applicationId']);
+        .addSelect(['applications.applicationId', 'applications.status']);
 
       qb.where('1=1');
 
@@ -261,7 +249,10 @@ export class JobsService {
           address: j.address,
           jobType: j.jobType,
           classification: j.classification || null,
+          fieldOfWork: j.fieldOfWork || [],
           slotsAvailable: j.slotsAvailable,
+          images: j.images || [],
+          workTime: j.workTime || [],
           isActive: j.isActive,
           createdAt: j.createdAt,
           company: j.company ? { 
@@ -278,7 +269,9 @@ export class JobsService {
             fullName: j.user.fullName,
             avatarUrl: j.user.avatarUrl
           } : undefined,
-          appliedCount: Array.isArray(j.applications) ? j.applications.length : 0
+          appliedCount: Array.isArray(j.applications) ? j.applications.length : 0,
+          acceptedCount: Array.isArray(j.applications) ? j.applications.filter(a => a.status === 'accepted').length : 0,
+          categories: Array.isArray((j as any).categories) ? (j as any).categories.map((c: any) => ({ categoryId: c.categoryId, name: c.name })) : [],
         })),
         total,
         page,
@@ -307,7 +300,7 @@ export class JobsService {
   async findOne(id: number) {
     const job = await this.repo.findOne({
       where: { jobId: id },
-      relations: ['company', 'category', 'user', 'applications'],
+      relations: ['company', 'category', 'user', 'applications', 'categories'],
     });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -316,16 +309,27 @@ export class JobsService {
   }
 
   async create(data: CreateJobDto) {
-    if (data.categoryName && !data.categoryId) {
-      let category = await this.categoryRepo.findOne({
-        where: { name: data.categoryName },
-      });
-      if (!category) {
-        category = await this.categoryRepo.save(
-          this.categoryRepo.create({ name: data.categoryName }),
-        );
+    // Handle multiple fields of work -> categories
+    let resolvedCategories: Category[] = [];
+    if (data.fieldOfWork && Array.isArray(data.fieldOfWork) && data.fieldOfWork.length > 0) {
+      for (const fieldName of data.fieldOfWork) {
+        let category = await this.categoryRepo.findOne({ where: { name: fieldName } });
+        if (!category) {
+          category = await this.categoryRepo.save(this.categoryRepo.create({ name: fieldName }));
+        }
+        resolvedCategories.push(category);
       }
+      // Set the first category as the primary (backward compat)
+      data.categoryId = resolvedCategories[0].categoryId;
+    } else if (data.fieldOfWork && typeof data.fieldOfWork === 'string') {
+      // Backward compat: single string
+      let category = await this.categoryRepo.findOne({ where: { name: data.fieldOfWork as any } });
+      if (!category) {
+        category = await this.categoryRepo.save(this.categoryRepo.create({ name: data.fieldOfWork as any }));
+      }
+      resolvedCategories.push(category);
       data.categoryId = category.categoryId;
+      data.fieldOfWork = [data.fieldOfWork as any];
     }
 
     // Ownership Validation
@@ -337,6 +341,13 @@ export class JobsService {
     }
     const job = this.repo.create(data);
     const saved = await this.repo.save(job);
+    
+    // Save ManyToMany categories
+    if (resolvedCategories.length > 0) {
+      saved.categories = resolvedCategories;
+      await this.repo.save(saved);
+    }
+    
     await this.invalidateCache();
     return saved;
   }
@@ -349,19 +360,48 @@ export class JobsService {
   }
 
   async update(id: number, data: UpdateJobDto) {
-    if (data.categoryName && !data.categoryId) {
-      let category = await this.categoryRepo.findOne({
-        where: { name: data.categoryName },
-      });
-      if (!category) {
-        category = await this.categoryRepo.save(
-          this.categoryRepo.create({ name: data.categoryName }),
-        );
+    // Handle multiple fields of work -> categories
+    let resolvedCategories: Category[] | null = null;
+    if (data.fieldOfWork && Array.isArray(data.fieldOfWork)) {
+      resolvedCategories = [];
+      if (data.fieldOfWork.length > 0) {
+        for (const fieldName of data.fieldOfWork) {
+          let category = await this.categoryRepo.findOne({ where: { name: fieldName } });
+          if (!category) {
+            category = await this.categoryRepo.save(this.categoryRepo.create({ name: fieldName }));
+          }
+          resolvedCategories.push(category);
+        }
+        data.categoryId = resolvedCategories[0].categoryId;
+      } else {
+        data.categoryId = undefined as any; // clear category if empty
       }
+    } else if (data.fieldOfWork && typeof data.fieldOfWork === 'string') {
+      // Backward compat: single string
+      resolvedCategories = [];
+      let category = await this.categoryRepo.findOne({ where: { name: data.fieldOfWork as any } });
+      if (!category) {
+        category = await this.categoryRepo.save(this.categoryRepo.create({ name: data.fieldOfWork as any }));
+      }
+      resolvedCategories.push(category);
       data.categoryId = category.categoryId;
+      data.fieldOfWork = [data.fieldOfWork as any];
     }
+
     const job = await this.findOne(id);
+    console.log(`[JobsService] Updating Job ID ${id}. New Title: ${data.title}`);
+    
+    // Explicitly update main fields to ensure TypeORM tracks changes
+    if (data.title) job.title = data.title;
+    if (data.description) job.description = data.description;
+    
     Object.assign(job, data);
+    
+    // Update ManyToMany categories
+    if (resolvedCategories !== null) {
+      job.categories = resolvedCategories;
+    }
+    
     const saved = await this.repo.save(job);
     await this.invalidateCache();
     return saved;
@@ -407,7 +447,7 @@ export class JobsService {
           ...(job.categoryId && { categoryId: job.categoryId }),
           isActive: true,
         },
-        relations: ['company', 'category', 'user'],
+      relations: ['company', 'category', 'user', 'categories'],
         take: 4,
       })
       .then((jobs) => jobs.filter((j) => Number(j.jobId) !== id));
@@ -424,44 +464,52 @@ export class JobsService {
   private recentViewsLock = new Set<string>();
 
   async recordView(jobId: number, userId?: string, sessionId?: string): Promise<void> {
-    // 1. Do not count guest users. Only count registered applicants.
-    if (!userId) {
-      return; 
+    // 1. Only count registered users
+    if (!userId) return;
+
+    // 2. Fetch the job to check ownership
+    const job = await this.repo.findOne({ where: { jobId }, select: ['jobId', 'companyId', 'userId'] });
+    if (!job) return;
+
+    // 3. DO NOT count the owner (Company or Tradesman)
+    if (job.userId === userId) return; // Tradesman owner
+    
+    if (job.companyId) {
+      const company = await this.companiesService.findByContactEmailOrName(userId);
+      if (company && Number(company.companyId) === Number(job.companyId)) {
+        return; // This user belongs to the company that owns the job
+      }
     }
 
-    // Anti-Race Condition Lock: Prevent instant double counting (e.g., from React Strict Mode)
+    // 4. Anti-spam/Unique: Check 24h window
     const lockKey = `${jobId}_${userId}`;
-    if (this.recentViewsLock.has(lockKey)) {
-      return;
-    }
+    if (this.recentViewsLock.has(lockKey)) return;
     this.recentViewsLock.add(lockKey);
-    // Release the memory lock after 10 seconds
     setTimeout(() => this.recentViewsLock.delete(lockKey), 10000);
 
-    // 2. Extend anti-spam window to 24 hours (1 day)
     const oneDayAgo = new Date();
     oneDayAgo.setHours(oneDayAgo.getHours() - 24);
 
-    // Build query to check if THIS specific user viewed THIS job within the last 24 hours
-    const qb = this.auditLogRepo.createQueryBuilder('log')
-      .where('log.entity = :entity', { entity: 'Job' })
-      .andWhere('log.action = :action', { action: 'READ' })
-      .andWhere('log.entityId = :entityId', { entityId: String(jobId) })
-      .andWhere('log.userId = :userId', { userId })
-      .andWhere('log.timestamp > :oneDayAgo', { oneDayAgo });
+    const existingLog = await this.auditLogRepo.findOne({
+      where: {
+        entity: 'Job',
+        action: 'READ',
+        entityId: String(jobId),
+        userId: userId,
+        timestamp: MoreThan(oneDayAgo)
+      }
+    });
 
-    const existingLog = await qb.getOne();
-
-    // 3. Increment by 1 only if no record exists in the past 24 hours
     if (!existingLog) {
-      const log = new AuditLog();
-      log.entity = 'Job';
-      log.action = 'READ';
-      log.entityId = String(jobId);
-      log.userId = userId; // Guaranteed to be a registered user
-      log.metadata = { sessionId };
+      const log = this.auditLogRepo.create({
+        entity: 'Job',
+        action: 'READ',
+        entityId: String(jobId),
+        userId: userId,
+        metadata: { sessionId }
+      });
       await this.auditLogRepo.save(log);
-      console.log(`[JobsService] ✅ View recorded for Job #${jobId} (User: ${userId})`);
+      console.log(`[JobsService] 📈 Unique View recorded for Job #${jobId}`);
     }
   }
 

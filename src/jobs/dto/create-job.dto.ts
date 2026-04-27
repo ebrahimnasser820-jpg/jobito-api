@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsNumber,
   IsBoolean,
+  IsArray,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -42,8 +43,9 @@ export class CreateJobDto {
   categoryId?: number;
 
   @IsOptional()
-  @IsString()
-  categoryName?: string;
+  @IsArray()
+  @IsString({ each: true })
+  fieldOfWork?: string[];
 
   @IsOptional()
   @Type(() => Number)
@@ -75,8 +77,9 @@ export class CreateJobDto {
   longitude?: number;
 
   @IsOptional()
-  @IsEnum(JobType)
-  jobType?: JobType;
+  @IsArray()
+  @IsString({ each: true })
+  jobType?: string[];
 
   @IsOptional()
   @Type(() => Number)
@@ -104,12 +107,18 @@ export class CreateJobDto {
   isActive?: boolean;
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   skills?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   workTime?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   images?: string[];
 
   @IsOptional()

@@ -3,6 +3,7 @@ import {
     Column,
     PrimaryGeneratedColumn,
     OneToMany,
+    ManyToMany,
 } from 'typeorm';
 import { Job } from './job.entity.js';
 
@@ -27,4 +28,7 @@ export class Category {
 
     @OneToMany(() => Job, (job) => job.category)
     jobs: Job[];
+
+    @ManyToMany(() => Job, (job) => job.categories)
+    jobsMany: Job[];
 }

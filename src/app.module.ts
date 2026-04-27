@@ -33,6 +33,7 @@ import { DashboardModule } from './dashboard/dashboard.module.js';
 import { AiChatbotModule } from './ai-chatbot/ai-chatbot.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
 import { TranslationsModule } from './translations/translations.module.js';
+import { RatingsModule } from './ratings/ratings.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -77,6 +78,7 @@ import { TranslationsModule } from './translations/translations.module.js';
     AiChatbotModule,
     MonitoringModule,
     TranslationsModule,
+    RatingsModule,
   ],
   controllers: [AppController],
   providers: [

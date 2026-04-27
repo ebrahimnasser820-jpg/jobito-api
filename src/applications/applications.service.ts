@@ -108,6 +108,17 @@ export class ApplicationsService {
     });
   }
 
+  async getHiredApplicantsForCompany(companyId: number) {
+    return this.repo.find({
+      where: { 
+        status: 'hired',
+        job: { companyId: companyId } 
+      },
+      relations: ['user', 'job'],
+      order: { appliedAt: 'DESC' },
+    });
+  }
+
   async findOne(applicationId: number, requesterId?: string, requesterRole?: string) {
     const app = await this.repo.findOne({
       where: { applicationId },
@@ -172,9 +183,29 @@ export class ApplicationsService {
       // Commented out to restore functionality while we debug
       // throw new ForbiddenException('You are not authorized to update this application status');
     }
+
+    if (status.toLowerCase() === 'accepted' && app.status?.toLowerCase() !== 'accepted') {
+      const acceptedCount = await this.repo.count({
+        where: { jobId: app.jobId, status: 'accepted' },
+      });
+      const maxSlots = app.job.slotsAvailable || 1;
+
+      if (acceptedCount >= maxSlots) {
+        throw new BadRequestException('لا يمكن قبول المزيد من المتقدمين، تم استيفاء العدد المطلوب للوظيفة');
+      }
+
+      app.status = status;
+      await this.repo.save(app);
+
+      if (acceptedCount + 1 >= maxSlots) {
+        await this.jobsService.update(app.jobId, { isActive: false });
+      }
+    } else {
+      app.status = status;
+      await this.repo.save(app);
+    }
     
-    app.status = status;
-    const updated = await this.repo.save(app);
+    const updated = app;
     console.log(`✅ [updateStatus] Update successful for App ${applicationId}`);
 
     // Log the decision in audit logs

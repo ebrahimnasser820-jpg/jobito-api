@@ -202,10 +202,14 @@ export class CompaniesService {
 
     jobs.forEach(job => {
       const count = job.applications?.length || 0;
-      const type = job.jobType?.toLowerCase();
-      if (applicantCounts.hasOwnProperty(type)) {
-        applicantCounts[type] += count;
-      }
+      const types = Array.isArray(job.jobType) ? job.jobType : [job.jobType].filter(Boolean);
+      
+      types.forEach(t => {
+        const type = t.toLowerCase();
+        if (applicantCounts.hasOwnProperty(type)) {
+          applicantCounts[type] += count;
+        }
+      });
     });
 
     const totalApplied = Object.values(applicantCounts).reduce((a, b) => a + b, 0);

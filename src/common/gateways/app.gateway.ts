@@ -72,4 +72,16 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     notifyMessagesRead(recipientId: string, readBy: string) {
         this.emitToRoom(`user_${recipientId}`, 'messages_read', { readBy });
     }
+
+    // ─── Typing Indicator ────────────────────────────────────────────────
+    @SubscribeMessage('typing')
+    handleTyping(
+        @MessageBody() data: { senderId: string; recipientId: string; isTyping: boolean },
+        @ConnectedSocket() client: Socket,
+    ) {
+        this.emitToRoom(`user_${data.recipientId}`, 'user_typing', {
+            senderId: data.senderId,
+            isTyping: data.isTyping,
+        });
+    }
 }

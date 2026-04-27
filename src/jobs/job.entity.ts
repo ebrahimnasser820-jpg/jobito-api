@@ -5,7 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  ManyToMany,
   JoinColumn,
+  JoinTable,
   OneToMany,
 } from 'typeorm';
 import { Company } from '../companies/company.entity.js';
@@ -50,6 +52,15 @@ export class Job {
   @Column({ name: 'category_id', type: 'bigint', nullable: true })
   categoryId: number | null;
 
+  @ManyToMany(() => Category, (category) => category.jobsMany, { eager: false })
+  @JoinTable({
+    name: 'job_categories',
+    schema: 'ptj',
+    joinColumn: { name: 'job_id', referencedColumnName: 'jobId' },
+    inverseJoinColumn: { name: 'category_id', referencedColumnName: 'categoryId' },
+  })
+  categories: Category[];
+
   @Column({ length: 255 })
   title: string;
 
@@ -91,14 +102,16 @@ export class Job {
 
   @Column({
     name: 'job_type',
-    type: 'varchar',
-    length: 50,
-    default: 'part-time',
+    type: 'json',
+    nullable: true,
   })
-  jobType: string;
+  jobType: string[];
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   classification: string;
+
+  @Column({ name: 'field_of_work', type: 'json', nullable: true })
+  fieldOfWork: string[];
 
   @Column({ name: 'slots_available', type: 'int', default: 1 })
   slotsAvailable: number;

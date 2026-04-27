@@ -59,6 +59,15 @@ export class ApplicationsController {
     return this.applicationsService.getJobApplications(jobId, user.sub, user.role || "");
   }
 
+  @Get('company/:companyId/hired')
+  @UseGuards(RolesGuard)
+  @Roles('company')
+  getHiredApplicantsForCompany(
+    @Param('companyId', ParseIntPipe) companyId: number,
+  ) {
+    return this.applicationsService.getHiredApplicantsForCompany(companyId);
+  }
+
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('company', 'student')
