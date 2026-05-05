@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { Application } from './application.entity.js';
 import { User } from '../users/user.entity.js';
 import { ApplicantProfile } from '../users/applicant-profile.entity.js';
@@ -84,39 +84,78 @@ export class ApplicationsService {
   }
 
   async getJobApplications(jobId: number, requesterId: string, requesterRole: string) {
+    console.log(`[getJobApplications] jobId=${jobId}, requesterId=${requesterId}, requesterRole=${requesterRole}`);
     const job = await this.jobsService.findOne(jobId);
+    console.log(`[getJobApplications] job.companyId=${job.companyId}, job.userId=${job.userId}`);
     
-    // Authorization Check
+    // Authorization Check: Allow if user is the job creator, or if it's a company-owned job and requester is a company
     let isAuthorized = false;
-    if (requesterRole === 'company') {
-      // For now, if role is company, we assume they have access if it's their job
-      // A more robust check would involve companyId matching
-      isAuthorized = Number(job.companyId) > 0; 
-    } else {
-      // Tradesman
-      isAuthorized = job.userId === requesterId;
+    if (job.userId === requesterId) {
+      isAuthorized = true;
+    } else if (requesterRole === 'company' && Number(job.companyId) > 0) {
+      // Note: A more robust check would verify if requester's companyId matches job.companyId
+      isAuthorized = true;
     }
 
     if (!isAuthorized) {
+      console.log(`[getJobApplications] UNAUTHORIZED!`);
       throw new BadRequestException('You are not authorized to view applicants for this job');
     }
 
-    return this.repo.find({
-      where: { jobId },
-      relations: ['user', 'job', 'job.company', 'job.category'],
-      order: { appliedAt: 'DESC' },
-    });
+    const apps = await this.repo.createQueryBuilder('app')
+      .leftJoinAndSelect('app.user', 'user')
+      .leftJoinAndSelect('user.applicantProfile', 'profile')
+      .leftJoinAndSelect('app.job', 'job')
+      .leftJoinAndSelect('job.company', 'company')
+      .leftJoinAndSelect('job.category', 'category')
+      .where('app.jobId = :jobId', { jobId })
+      .orderBy('app.appliedAt', 'DESC')
+      .getMany();
+
+    console.log(`[getJobApplications] found ${apps.length} applications with profiles.`);
+    return apps;
   }
 
   async getHiredApplicantsForCompany(companyId: number) {
     return this.repo.find({
-      where: { 
-        status: 'hired',
-        job: { companyId: companyId } 
-      },
+      where: [
+        { status: 'hired', job: { companyId: companyId } },
+        { status: 'accepted', job: { companyId: companyId } }
+      ],
       relations: ['user', 'job'],
       order: { appliedAt: 'DESC' },
     });
+  }
+
+  async getHiredApplicantsForUser(userId: string) {
+    console.log(`🔍 [getHiredApplicantsForUser] START search for user: ${userId}`);
+    
+    const user = await this.userRepo.findOne({ where: { userId } });
+    const userEmail = user?.email;
+
+    // Fetch all applications for this user's jobs to see what's going on
+    const qb = this.repo.createQueryBuilder('app')
+      .leftJoinAndSelect('app.job', 'job')
+      .leftJoinAndSelect('app.user', 'user')
+      .where(new Brackets(qb => {
+        qb.where('job.userId = :userId', { userId });
+        if (userEmail) {
+          qb.orWhere('job.companyId IN (SELECT company_id FROM ptj.companies WHERE contact_email = :userEmail)', { userEmail });
+        }
+      }));
+
+    const allApps = await qb.getMany();
+    console.log(`📊 [getHiredApplicantsForUser] Found ${allApps.length} total applications for this user's jobs.`);
+    
+    // Log statuses to debug
+    allApps.forEach(a => console.log(`   - AppID: ${a.applicationId}, Status: ${a.status}, JobID: ${a.jobId}`));
+
+    // Filter by accepted/hired statuses (including potential Arabic versions or Case variations)
+    const hiredStatuses = ['accepted', 'hired', 'Accepted', 'Hired', 'قبول', 'تم التوظيف'];
+    const apps = allApps.filter(a => hiredStatuses.includes(a.status?.toLowerCase()) || hiredStatuses.includes(a.status));
+
+    console.log(`✅ [getHiredApplicantsForUser] Returning ${apps.length} hired/accepted applicants.`);
+    return apps;
   }
 
   async findOne(applicationId: number, requesterId?: string, requesterRole?: string) {
@@ -188,17 +227,18 @@ export class ApplicationsService {
       const acceptedCount = await this.repo.count({
         where: { jobId: app.jobId, status: 'accepted' },
       });
-      const maxSlots = app.job.slotsAvailable || 1;
+      const maxSlots = app.job?.slotsAvailable || 1;
+      const isTradesmanJob = app.job?.classification === 'tradesman_work';
 
-      if (acceptedCount >= maxSlots) {
-        throw new BadRequestException('لا يمكن قبول المزيد من المتقدمين، تم استيفاء العدد المطلوب للوظيفة');
-      }
+      console.log(`🎯 [updateStatus] Job ID: ${app.jobId}, Accepted: ${acceptedCount}, MaxSlots: ${maxSlots}, IsTradesman: ${isTradesmanJob}`);
 
       app.status = status;
       await this.repo.save(app);
 
-      if (acceptedCount + 1 >= maxSlots) {
-        await this.jobsService.update(app.jobId, { isActive: false });
+      // Close job if it's a tradesman job (usually one-person) or if max slots are reached
+      if (isTradesmanJob || acceptedCount + 1 >= maxSlots) {
+        console.log(`🔒 [updateStatus] Closing Job ${app.jobId} as it is now filled.`);
+        await this.jobsService.update(Number(app.jobId), { isActive: false });
       }
     } else {
       app.status = status;

@@ -51,7 +51,7 @@ export class ApplicationsController {
 
   @Get('job/:jobId')
   @UseGuards(RolesGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'tradesman')
   getJobApplications(
     @Param('jobId', ParseIntPipe) jobId: number,
     @CurrentUser() user: RequestUser,
@@ -66,6 +66,13 @@ export class ApplicationsController {
     @Param('companyId', ParseIntPipe) companyId: number,
   ) {
     return this.applicationsService.getHiredApplicantsForCompany(companyId);
+  }
+
+  @Get('user/hired')
+  @UseGuards(RolesGuard)
+  @Roles('student', 'tradesman', 'company')
+  getHiredApplicantsForUser(@CurrentUser() user: RequestUser) {
+    return this.applicationsService.getHiredApplicantsForUser(user.sub);
   }
 
   @Get(':id')

@@ -34,6 +34,7 @@ import { AiChatbotModule } from './ai-chatbot/ai-chatbot.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
 import { TranslationsModule } from './translations/translations.module.js';
 import { RatingsModule } from './ratings/ratings.module.js';
+import { AdminModule } from './admin/admin.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -79,6 +80,7 @@ import { RatingsModule } from './ratings/ratings.module.js';
     MonitoringModule,
     TranslationsModule,
     RatingsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

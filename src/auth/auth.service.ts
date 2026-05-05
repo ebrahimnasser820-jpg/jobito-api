@@ -19,6 +19,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { OtpCode } from './otp-code.entity.js';
 import * as bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
+import { Admin } from '../admin/entities/admin.entity.js';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +30,8 @@ export class AuthService {
     private mailService: MailService,
     @InjectRepository(OtpCode)
     private otpRepo: Repository<OtpCode>,
+    @InjectRepository(Admin)
+    private adminRepo: Repository<Admin>,
     private notificationsService: NotificationsService, // Changed from ClientProxy to Service
     @Inject(WINSTON_MODULE_PROVIDER)
     private readonly logger: Logger,
@@ -69,38 +72,45 @@ export class AuthService {
 
   /** Validate OTP code with detailed logging */
   private async validateOtp(userId: string, code: string): Promise<OtpCode> {
-    this.logger.info(`🔍 [AuthService] Validating OTP code: ${code} for user: ${userId}`);
+    const cleanCode = code.trim();
+    this.logger.info(`🔍 [AuthService] Validating OTP code: [${cleanCode}] for user: ${userId}`);
 
-    // Fetch the code without restrictive filters first to find the root cause
     const otp = await this.otpRepo.findOne({
       where: {
         userId: userId,
-        code,
+        code: cleanCode,
       },
-      order: { expiresAt: 'DESC' } // Take the most recent one if multiple exist
+      order: { expiresAt: 'DESC' }
     });
 
     if (!otp) {
-      this.logger.warn(`❌ [AuthService] OTP code ${code} not found for user ${userId}`);
+      // Find ANY recent OTP for this user to log more details
+      const anyOtp = await this.otpRepo.findOne({ where: { userId }, order: { expiresAt: 'DESC' } });
+      this.logger.warn(`❌ [AuthService] OTP code [${cleanCode}] not found for user ${userId}. Latest code in DB for this user was: [${anyOtp?.code}]`);
       throw new BadRequestException('Invalid verification code.');
     }
 
     if (otp.isUsed) {
-      this.logger.warn(`❌ [AuthService] OTP code ${code} has already been used.`);
+      this.logger.warn(`❌ [AuthService] OTP code ${cleanCode} has already been used.`);
       throw new BadRequestException('This code has already been used.');
     }
 
-    if (new Date() > otp.expiresAt) {
-      this.logger.warn(`❌ [AuthService] OTP code ${code} expired at ${otp.expiresAt}. Current time: ${new Date()}`);
+    const now = new Date();
+    // Buffer of 5 minutes to handle server time drifts
+    const adjustedExpiresAt = new Date(otp.expiresAt.getTime() + 5 * 60 * 1000); 
+
+    if (now > adjustedExpiresAt) {
+      this.logger.warn(`❌ [AuthService] OTP code ${cleanCode} expired. Now: ${now}, ExpiresAt: ${otp.expiresAt} (Adjusted: ${adjustedExpiresAt})`);
       throw new BadRequestException('This code has expired. Please request a new one.');
     }
 
     // Mark as used
     otp.isUsed = true;
     await this.otpRepo.save(otp);
-    this.logger.info(`✅ [AuthService] OTP code ${code} validated successfully.`);
+    this.logger.info(`✅ [AuthService] OTP code ${cleanCode} validated successfully.`);
     return otp;
   }
+
 
   // ─── Registration ─────────────────────────────────────────────
 
@@ -253,43 +263,66 @@ export class AuthService {
   // ─── Login ────────────────────────────────────────────────────
 
   async login(data: any) {
-    const user = await this.usersService.findByEmail(data.email);
+    // 1. Try finding in Users table
+    let user = await this.usersService.findByEmail(data.email);
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (user) {
+      if (!user.passwordHash) {
+        throw new UnauthorizedException('This account uses Google login. Please sign in with Google.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      if (!user.isActive) {
+        throw new UnauthorizedException('Please verify your email before logging in');
+      }
+
+      const payload = {
+        sub: user.userId,
+        email: user.email,
+        role: user.role,
+        name: user.fullName,
+        avatar: user.avatarUrl,
+        banner: user.banner_url,
+        phone: user.phone || null,
+        gender: user.applicantProfile?.gender || null,
+        location: user.location || null,
+        classification: user.classification || null,
+        notificationPreferences: user.notificationPreferences || null,
+      };
+
+      return { access_token: this.jwtService.sign(payload) };
     }
 
-    if (!user.passwordHash) {
-      throw new UnauthorizedException('This account uses Google login. Please sign in with Google.');
+    // 2. Try finding in Admins table (Unified login)
+    const admin = await this.adminRepo.findOne({ where: { email: data.email } });
+    if (admin) {
+      const isPasswordValid = await bcrypt.compare(data.password, admin.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      if (!admin.isActive) {
+        throw new UnauthorizedException('Admin account is deactivated');
+      }
+
+      const payload = {
+        sub: admin.adminId,
+        adminId: admin.adminId,
+        email: admin.email,
+        role: 'admin',
+        adminRole: admin.role,
+        name: admin.fullName,
+        avatar: admin.avatarUrl,
+      };
+
+      return { access_token: this.jwtService.sign(payload) };
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Please verify your email before logging in');
-    }
-
-    const payload = {
-      sub: user.userId,
-      email: user.email,
-      role: user.role,
-      name: user.fullName,
-      avatar: user.avatarUrl,
-      banner: user.banner_url,
-      phone: user.phone || null,
-
-      gender: user.applicantProfile?.gender || null,
-      location: user.location || null,
-      classification: user.classification || null,
-      notificationPreferences: user.notificationPreferences || null,
-    };
-
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+    throw new UnauthorizedException('Invalid credentials');
   }
 
   // ─── Forgot Password ─────────────────────────────────────────

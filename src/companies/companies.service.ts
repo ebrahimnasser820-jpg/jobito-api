@@ -117,18 +117,24 @@ export class CompaniesService {
     // Count total applications (new candidates)
     let totalApplications = 0;
     let todayApplications = 0;
+    let acceptedCandidates = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     for (const job of jobs) {
       const apps = job.applications || [];
+      console.log(`[Dashboard] Job ${job.jobId} has ${apps.length} applications.`);
+      apps.forEach(a => console.log(`[Dashboard] Application ${a.applicationId} status: ${a.status}`));
+      
       totalApplications += apps.length;
+      acceptedCandidates += apps.filter((a: any) => a.status?.toLowerCase() === 'hired' || a.status?.toLowerCase() === 'accepted').length;
       todayApplications += apps.filter((a: { appliedAt: string | Date }) => {
         const appliedDate = new Date(a.appliedAt);
         appliedDate.setHours(0, 0, 0, 0);
         return appliedDate.getTime() === today.getTime();
       }).length;
     }
+    console.log(`[Dashboard] Final accepted count: ${acceptedCandidates}`);
 
     // New: Calculate Job Views for the company using AuditLog
     const jobIds = jobs.map(j => String(j.jobId)); // AuditLog entityId is string
@@ -174,6 +180,7 @@ export class CompaniesService {
       new_candidates: totalApplications,
       schedule_today: todayApplications,
       messages_received: totalViews, 
+      accepted_candidates: acceptedCandidates,
       total_views: totalViews,
       view_change: Math.round(percentageChange * 10) / 10,
       total_jobs: jobs.length,
@@ -340,13 +347,20 @@ export class CompaniesService {
       labels = period === 'Year' ? ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'] : (period === 'Month' ? ['W1', 'W2', 'W3', 'W4'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
     }
 
+    let totalViewsAllTime = 0;
+    if (jobIdsStr.length > 0) {
+      totalViewsAllTime = await this.auditLogRepo.count({
+        where: { entity: 'Job', action: 'READ', entityId: In(jobIdsStr) }
+      });
+    }
+
     return {
       labels,
       views: views.map((v) => Math.round(v)),
       applied: applied.map((a) => Math.round(a)),
       summary: {
         views: {
-          total: views.reduce((a, b) => a + b, 0).toLocaleString(),
+          total: totalViewsAllTime.toLocaleString(),
           trend: 'Live',
           isUp: true,
         },

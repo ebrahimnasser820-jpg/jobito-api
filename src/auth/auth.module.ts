@@ -10,6 +10,7 @@ import { CompaniesModule } from '../companies/companies.module.js';
 import { JwtStrategy } from './jwt.strategy.js';
 import { OtpCode } from './otp-code.entity.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { Admin } from '../admin/entities/admin.entity.js';
 
 @Global()
 @Module({
@@ -18,7 +19,7 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
     ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     CompaniesModule,
-    TypeOrmModule.forFeature([OtpCode]),
+    TypeOrmModule.forFeature([OtpCode, Admin]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

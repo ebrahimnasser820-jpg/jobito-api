@@ -14,11 +14,17 @@ export class Rating {
   @PrimaryGeneratedColumn({ name: 'rating_id', type: 'bigint' })
   ratingId: number;
 
-  @Column({ name: 'user_id', type: 'uuid', nullable: true })
-  userId: string;
+  @Column({ name: 'rater_user_id', type: 'uuid', nullable: true })
+  raterUserId: string;
 
-  @Column({ name: 'company_id', type: 'bigint', nullable: true })
-  companyId: number;
+  @Column({ name: 'rater_company_id', type: 'bigint', nullable: true })
+  raterCompanyId: number;
+
+  @Column({ name: 'target_user_id', type: 'uuid', nullable: true })
+  targetUserId: string;
+
+  @Column({ name: 'target_company_id', type: 'bigint', nullable: true })
+  targetCompanyId: number;
 
   @Column({ name: 'rating_value', type: 'smallint' })
   ratingValue: number;
@@ -33,10 +39,19 @@ export class Rating {
   createdAt: Date;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
+  @JoinColumn({ name: 'rater_user_id' })
+  raterUser: User;
 
   @ManyToOne(() => Company)
-  @JoinColumn({ name: 'company_id' })
-  company: Company;
+  @JoinColumn({ name: 'rater_company_id' })
+  raterCompany: Company;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'target_user_id' })
+  targetUser: User;
+
+  @ManyToOne(() => Company)
+  @JoinColumn({ name: 'target_company_id' })
+  targetCompany: Company;
 }
+

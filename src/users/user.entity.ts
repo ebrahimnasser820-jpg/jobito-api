@@ -73,6 +73,21 @@ export class User {
   @Column({ type: 'text', nullable: true })
   location: string;
 
+  @Column({ type: 'text', nullable: true })
+  bio: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  skills: string[];
+
+  @Column({ type: 'jsonb', nullable: true })
+  services: string[];
+
+  @Column({ type: 'jsonb', nullable: true })
+  portfolios: string[];
+
+  @Column({ name: 'criminal_record_url', type: 'text', nullable: true })
+  criminalRecordUrl: string;
+
   @Column({ name: 'theme_preference', length: 10, default: 'light' })
   themePreference: string;
 
@@ -84,6 +99,9 @@ export class User {
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
+
+  @Column({ name: 'account_status', length: 20, default: 'active' })
+  accountStatus: string; // 'active', 'warned', 'suspended', 'banned'
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

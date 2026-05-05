@@ -26,4 +26,9 @@ export class RatingsController {
   findGivenByCompany(@Param('companyId') companyId: number) {
     return this.ratingsService.findGivenByCompany(companyId);
   }
+
+  @Get('user/:userId/given')
+  findGivenByUser(@Param('userId') userId: string) {
+    return this.ratingsService.findGivenByUserId(userId);
+  }
 }

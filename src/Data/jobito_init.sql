@@ -177,17 +177,31 @@ cover_letter   TEXT,
 resume_url     TEXT,
 status         VARCHAR(50) DEFAULT 'applied' CHECK (status IN ('applied', 'reviewing', 'hired', 'declined')),
 applied_at     TIMESTAMPTZ DEFAULT now(),
+updated_at     TIMESTAMPTZ DEFAULT now(),
 UNIQUE (job_id, user_id)
+);
 );
 
 CREATE TABLE ratings (
-rating_id    BIGSERIAL PRIMARY KEY,
-user_id      UUID REFERENCES users(user_id) ON DELETE CASCADE,
-company_id   BIGINT REFERENCES companies(company_id) ON DELETE CASCADE,
-rating_value SMALLINT CHECK (rating_value BETWEEN 1 AND 5),
-comment      TEXT,
-created_at   TIMESTAMPTZ DEFAULT now()
+    rating_id          BIGSERIAL PRIMARY KEY,
+    rater_user_id      UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    rater_company_id   BIGINT REFERENCES companies(company_id) ON DELETE CASCADE,
+    target_user_id     UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    target_company_id  BIGINT REFERENCES companies(company_id) ON DELETE CASCADE,
+    rater_type         VARCHAR(20) NOT NULL, -- 'USER' or 'COMPANY'
+    rating_value       SMALLINT CHECK (rating_value BETWEEN 1 AND 5),
+    comment            TEXT,
+    created_at         TIMESTAMPTZ DEFAULT now(),
+    CONSTRAINT chk_rater CHECK (rater_user_id IS NOT NULL OR rater_company_id IS NOT NULL),
+    CONSTRAINT chk_target CHECK (target_user_id IS NOT NULL OR target_company_id IS NOT NULL)
 );
+
+-- Indices for performance
+CREATE INDEX idx_ratings_target_user ON ratings(target_user_id);
+CREATE INDEX idx_ratings_target_company ON ratings(target_company_id);
+CREATE INDEX idx_ratings_rater_user ON ratings(rater_user_id);
+CREATE INDEX idx_ratings_rater_company ON ratings(rater_company_id);
+
 
 CREATE TABLE work_groups (
 group_id     BIGSERIAL PRIMARY KEY,

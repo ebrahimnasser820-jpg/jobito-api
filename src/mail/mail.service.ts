@@ -112,4 +112,14 @@ export class MailService {
       html,
     });
   }
+
+  /** Generic send mail (plain text) */
+  async sendMail(to: string, subject: string, text: string): Promise<void> {
+    await this.transporter.sendMail({
+      from: `"Jobito" <${process.env.MAIL_USER}>`,
+      to,
+      subject,
+      text,
+    });
+  }
 }

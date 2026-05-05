@@ -9,6 +9,7 @@ import { FilterJobsDto } from './dto/filter-jobs.dto.js';
 import { AiSmartService } from '../audit-logs/ai-smart.service.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
 import { CompaniesService } from '../companies/companies.service.js';
+import { RatingsService } from '../ratings/ratings.service.js';
 
 @Injectable()
 export class JobsService {
@@ -22,6 +23,7 @@ export class JobsService {
     private dataSource: DataSource,
     private aiSmartService: AiSmartService,
     private companiesService: CompaniesService,
+    private ratingsService: RatingsService,
   ) {}
 
   async findAllCategories() {
@@ -238,48 +240,59 @@ export class JobsService {
       
       const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
 
-      const result = {
-        data: data.map(j => ({
-          jobId: j.jobId,
-          title: j.title,
-          description: j.description,
-          salary: j.salary ? Number(j.salary) : null,
-          salaryMin: j.salaryMin ? Number(j.salaryMin) : null,
-          salaryMax: j.salaryMax ? Number(j.salaryMax) : null,
-          address: j.address,
-          jobType: j.jobType,
-          classification: j.classification || null,
-          fieldOfWork: j.fieldOfWork || [],
-          slotsAvailable: j.slotsAvailable,
-          images: j.images || [],
-          workTime: j.workTime || [],
-          isActive: j.isActive,
-          createdAt: j.createdAt,
-          company: j.company ? { 
-            companyId: j.company.companyId, 
-            name: j.company.name, 
-            logoUrl: j.company.logoUrl 
-          } : undefined,
-          category: j.category ? { 
-            categoryId: j.category.categoryId, 
-            name: j.category.name 
-          } : undefined,
-          user: j.user ? {
-            userId: j.user.userId,
-            fullName: j.user.fullName,
-            avatarUrl: j.user.avatarUrl
-          } : undefined,
-          appliedCount: Array.isArray(j.applications) ? j.applications.length : 0,
-          acceptedCount: Array.isArray(j.applications) ? j.applications.filter(a => a.status === 'accepted').length : 0,
-          categories: Array.isArray((j as any).categories) ? (j as any).categories.map((c: any) => ({ categoryId: c.categoryId, name: c.name })) : [],
-        })),
+      const mappedData = data.map(j => ({
+        jobId: j.jobId,
+        title: j.title,
+        description: j.description,
+        salary: j.salary ? Number(j.salary) : null,
+        salaryMin: j.salaryMin ? Number(j.salaryMin) : null,
+        salaryMax: j.salaryMax ? Number(j.salaryMax) : null,
+        address: j.address,
+        jobType: j.jobType,
+        classification: j.classification || null,
+        fieldOfWork: j.fieldOfWork || [],
+        slotsAvailable: j.slotsAvailable,
+        images: j.images || [],
+        workTime: j.workTime || [],
+        isActive: j.isActive,
+        createdAt: j.createdAt,
+        company: j.company ? { 
+          companyId: j.company.companyId, 
+          name: j.company.name, 
+          logoUrl: j.company.logoUrl 
+        } : undefined,
+        category: j.category ? { 
+          categoryId: j.category.categoryId, 
+          name: j.category.name 
+        } : undefined,
+        user: j.user ? {
+          userId: j.user.userId,
+          fullName: j.user.fullName,
+          avatarUrl: j.user.avatarUrl
+        } : undefined,
+        appliedCount: Array.isArray(j.applications) ? j.applications.length : 0,
+        acceptedCount: Array.isArray(j.applications) ? j.applications.filter(a => a.status === 'accepted').length : 0,
+        categories: Array.isArray((j as any).categories) ? (j as any).categories.map((c: any) => ({ categoryId: c.categoryId, name: c.name })) : [],
+      }));
+
+      // Fetch ratings in parallel for better performance
+      const resultsWithRatings = await Promise.all(mappedData.map(async (job: any) => {
+        let avgRating = 0;
+        if (job.user) {
+          avgRating = await this.ratingsService.getAverageRatingForUser(job.user.userId);
+        } else if (job.company) {
+          avgRating = await this.ratingsService.getAverageRatingForCompany(job.company.companyId);
+        }
+        return { ...job, avgRating };
+      }));
+
+      return {
+        data: resultsWithRatings,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / (limit || 1)),
       };
-
-      return result;
     } catch (error: unknown) {
       const err = error as Error;
       console.error('CRASH in findAll jobs:', err);
@@ -548,12 +561,43 @@ export class JobsService {
       percentageChange = 100; 
     }
 
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const dailyViewsRaw = await this.dataSource.query(
+      `SELECT DATE(timestamp) as date, COUNT(*) as count 
+       FROM ptj.audit_logs 
+       WHERE entity = 'Job' AND action = 'READ' AND entity_id = $1 AND timestamp >= $2
+       GROUP BY DATE(timestamp) 
+       ORDER BY DATE(timestamp) ASC`,
+      [String(jobId), thirtyDaysAgo]
+    );
+
+    const viewStats: { date: string; views: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      
+      const match = dailyViewsRaw.find((r: any) => {
+        const rDate = new Date(r.date);
+        const rStr = rDate.getFullYear() + '-' + String(rDate.getMonth() + 1).padStart(2, '0') + '-' + String(rDate.getDate()).padStart(2, '0');
+        return rStr === dateStr;
+      });
+
+      viewStats.push({
+        date: dateStr,
+        views: match ? parseInt(match.count) : 0
+      });
+    }
+
     return {
       totalViews,
       currentPeriodViews,
       previousPeriodViews: lastPeriodVal,
       percentageChange: Math.round(percentageChange * 10) / 10,
-      trend: percentageChange >= 0 ? 'up' : 'down'
+      trend: percentageChange >= 0 ? 'up' : 'down',
+      viewStats
     };
   }
 }
