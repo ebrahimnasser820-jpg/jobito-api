@@ -21,10 +21,10 @@ export class ReportedContent {
   @PrimaryGeneratedColumn({ name: 'report_id' })
   reportId: number;
 
-  @Column({ name: 'reporter_user_id', type: 'uuid', nullable: true })
+  @Column({ name: 'reporter_user_id', type: 'text', nullable: true })
   reporterUserId: string;
 
-  @Column({ name: 'post_owner_id', type: 'uuid' })
+  @Column({ name: 'post_owner_id', type: 'text' })
   postOwnerId: string;
 
   @Column({ name: 'post_owner_name', length: 255 })

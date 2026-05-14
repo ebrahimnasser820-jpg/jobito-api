@@ -4,6 +4,7 @@ import { User } from './user.entity.js';
 import { ApplicantProfile } from './applicant-profile.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AppGateway } from '../common/gateways/app.gateway.js';
+import { MongoUserProfileService } from './mongo-user-profile.service.js';
 
 @Injectable()
 export class UsersService {
@@ -13,6 +14,7 @@ export class UsersService {
     @InjectRepository(ApplicantProfile)
     private profileRepository: Repository<ApplicantProfile>,
     private readonly gateway: AppGateway,
+    private mongoProfileService: MongoUserProfileService,
   ) { }
 
   findAll() {
@@ -20,7 +22,12 @@ export class UsersService {
   }
 
   findByEmail(email: string) {
-    return this.usersRepository.findOne({ where: { email }, relations: ['applicantProfile'] });
+    if (!email) return null;
+    const cleanEmail = email.trim().toLowerCase();
+    return this.usersRepository.findOne({ 
+      where: { email: cleanEmail },
+      relations: ['applicantProfile'] 
+    });
   }
 
   findByGoogleId(googleId: string) {
@@ -52,6 +59,11 @@ export class UsersService {
       ...userData
     } = data as any;
 
+    if (skills !== undefined) (userData as any).skills = skills;
+    if (bio !== undefined) (userData as any).bio = bio;
+    if (services !== undefined) (userData as any).services = services;
+    if (portfolios !== undefined) (userData as any).portfolios = portfolios;
+
     if (Object.keys(userData).length > 0) {
       await this.usersRepository.update(userId, userData);
     }
@@ -79,6 +91,21 @@ export class UsersService {
         fullName: updatedUser.fullName,
         avatarUrl: updatedUser.avatarUrl,
       });
+
+      // ─── Sync to MongoDB ──────────────────────────────────────
+      this.mongoProfileService.updateProfile(userId, {
+        fullName: updatedUser.fullName,
+        avatarUrl: updatedUser.avatarUrl,
+        bannerUrl: updatedUser.banner_url,
+        phone: updatedUser.phone,
+        location: updatedUser.location,
+        bio: updatedUser.bio,
+        skills: updatedUser.skills,
+        services: updatedUser.services,
+        classification: updatedUser.classification,
+        themePreference: updatedUser.themePreference,
+        languagePreference: updatedUser.languagePreference,
+      }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on user update: ${err.message}`));
     }
 
     return updatedUser;

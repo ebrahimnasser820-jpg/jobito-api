@@ -79,6 +79,12 @@ export class AdminAuthController {
     return this.authService.listAdmins();
   }
 
+  @Get('staff')
+  @UseGuards(AdminJwtAuthGuard)
+  async getStaffList() {
+    return this.authService.listAdmins(); // Reusing listAdmins but it's now accessible to all admins
+  }
+
   // ─── Super Admin: Activity Log ────────────────────────────────
 
   @Get('activity-log')
@@ -86,6 +92,19 @@ export class AdminAuthController {
   @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
   async getActivityLog(@Query('page') page?: string, @Query('limit') limit?: string) {
     return this.authService.getActivityLogs(parseInt(page || '1'), parseInt(limit || '20'));
+  }
+
+  // ─── Super Admin: Ops Manager Activities ───────────────────
+  
+  // ─── Shared: Activity Log ───────────────────
+  
+  @Get('ops-activities')
+  @UseGuards(AdminJwtAuthGuard)
+  async getActivities(@CurrentUser() admin: any, @Query('page') page?: string, @Query('limit') limit?: string) {
+    const isAdmin = admin.adminRole === 'super_admin';
+    // If not super admin, only fetch personal activities
+    const adminIdToFilter = isAdmin ? undefined : admin.adminId;
+    return this.dashboardService.getAdminActivities(parseInt(page || '1'), parseInt(limit || '50'), adminIdToFilter);
   }
 
   // ─── Super Admin: Review System Requests ──────────────────────
@@ -102,6 +121,14 @@ export class AdminAuthController {
   @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
   async reviewSystemRequest(@CurrentUser() admin: any, @Param('id') id: string, @Body() dto: ReviewSystemRequestDto) {
     return this.systemRequestService.reviewRequest(admin.adminId, parseInt(id), dto.action as 'approve' | 'reject', dto.reviewNote);
+  }
+
+  // ─── Ops Manager: Personal Activity Chart (last 24h) ─────────
+
+  @Get('ops-chart')
+  @UseGuards(AdminJwtAuthGuard)
+  async getOpsChart(@CurrentUser() admin: any) {
+    return this.dashboardService.getOpsManagerChartData(admin.adminId);
   }
 
   // ─── Shared: Profile ─────────────────────────────────────────

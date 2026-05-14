@@ -7,7 +7,15 @@ import {
   Req,
   Query,
   Res,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  BadRequestException
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
@@ -17,6 +25,21 @@ import { ResendCodeDto } from './dto/resend-code.dto.js';
 import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
+
+const storage = diskStorage({
+  destination: './uploads/documents',
+  filename: (_req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const fileFilterConfig = (_req: any, file: any, cb: any) => {
+  if (!file.mimetype.match(/\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document|jpg|jpeg|png)$/)) {
+    return cb(new BadRequestException('Only PDF, Word, or Image documents are allowed'), false);
+  }
+  cb(null, true);
+};
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +55,24 @@ export class AuthController {
   @Post('register')
   register(@Body() body: RegisterDto) {
     return this.authService.register(body);
+  }
+
+  @Post('upload-document')
+  @UseInterceptors(FileInterceptor('file', { storage, fileFilter: fileFilterConfig }))
+  uploadDocument(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB limit for PDFs
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return {
+      message: 'File uploaded successfully',
+      url: `/uploads/documents/${file.filename}`,
+    };
   }
 
   @Post('login')
@@ -59,6 +100,21 @@ export class AuthController {
       : `${frontendHost}/user-information?verified=false`;
       
     return res.redirect(redirectUrl);
+  }
+
+  @Post('send-phone-otp')
+  sendPhoneOtp(@Body() body: { email: string, phone: string }) {
+    return this.authService.sendPhoneOtp(body.email, body.phone);
+  }
+
+  @Post('verify-phone-otp')
+  verifyPhoneOtp(@Body() body: { email: string, phone: string, code: string }) {
+    return this.authService.verifyPhoneOtp(body.email, body.phone, body.code);
+  }
+
+  @Post('verify-firebase-phone')
+  verifyFirebasePhone(@Body() body: { email: string, firebaseToken: string }) {
+    return this.authService.verifyFirebasePhoneToken(body.email, body.firebaseToken);
   }
 
   @Post('resend-code')

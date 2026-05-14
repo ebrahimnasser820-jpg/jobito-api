@@ -16,10 +16,14 @@ import { JwtService } from '@nestjs/jwt';
 import { MailService } from '../mail/mail.service.js';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { MongoUserProfileService } from '../users/mongo-user-profile.service.js';
 import { OtpCode } from './otp-code.entity.js';
 import * as bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import { Admin } from '../admin/entities/admin.entity.js';
+import { AdminDashboardService } from '../admin/services/admin-dashboard.service.js';
+import { AuditLog } from '../audit-logs/audit-log.entity.js';
+import * as admin from 'firebase-admin';
 
 @Injectable()
 export class AuthService {
@@ -32,7 +36,10 @@ export class AuthService {
     private otpRepo: Repository<OtpCode>,
     @InjectRepository(Admin)
     private adminRepo: Repository<Admin>,
+    @InjectRepository(AuditLog)
+    private auditLogRepo: Repository<AuditLog>,
     private notificationsService: NotificationsService, // Changed from ClientProxy to Service
+    private mongoUserProfileService: MongoUserProfileService,
     @Inject(WINSTON_MODULE_PROVIDER)
     private readonly logger: Logger,
     private configService: ConfigService,
@@ -115,13 +122,18 @@ export class AuthService {
   // ─── Registration ─────────────────────────────────────────────
 
   async register(data: any) {
-    const existing = await this.usersService.findByEmail(data.email);
+    if (AdminDashboardService.maintenanceMode) {
+      throw new BadRequestException('The system is currently undergoing maintenance. Registration is temporarily disabled. Please try again later.');
+    }
+
+    const cleanEmail = data.email?.trim().toLowerCase();
+    const existing = await this.usersService.findByEmail(cleanEmail);
     if (existing) {
       if (existing.isActive) {
         throw new BadRequestException('Email already registered');
       }
       // If user exists but is not active, we allow re-registration (it will update the existing user)
-      this.logger.info(`Updating pending registration for: ${data.email}`);
+      this.logger.info(`Updating pending registration for: ${cleanEmail}`);
     }
 
     const hash = await bcrypt.hash(data.password, 10);
@@ -145,8 +157,8 @@ export class AuthService {
     } else {
       // Create new inactive user
       user = await this.usersService.create({
-        fullName: data.fullName || data.full_name || data.name || data.email.split('@')[0],
-        email: data.email,
+        fullName: data.fullName || data.full_name || data.name || cleanEmail.split('@')[0],
+        email: cleanEmail,
         passwordHash: hash,
         role: role,
         phone: data.phone || data.companyPhone,
@@ -160,7 +172,7 @@ export class AuthService {
 
     this.logger.info(`Starting registration for: ${data.email} with role: ${role}. Data staged in user bio.`);
     
-    await this.notificationsService.handleUserRegistered({ email: data.email, code });
+    await this.notificationsService.handleUserRegistered({ email: cleanEmail, code });
     
     return { message: 'Registration pending. Please check your email for the verification code to complete your setup.' };
   }
@@ -181,7 +193,8 @@ export class AuthService {
   }
 
   async verifyEmail(email: string, code: string) {
-    const user = await this.usersService.findByEmail(email);
+    const cleanEmail = email?.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(cleanEmail);
     if (user) {
       if (user.isActive) {
         return { message: 'Email already verified' };
@@ -202,7 +215,8 @@ export class AuthService {
               address: registrationData.address || registrationData.companyAddress,
               crDocumentUrl: registrationData.cr_document_url || registrationData.commercial_register,
               taxId: registrationData.tax_number || registrationData.taxNumber,
-              licenseNumber: registrationData.license_number || registrationData.licenseNumber || registrationData.commercial_register,
+              taxDocumentUrl: registrationData.tax_document_url,
+              licenseNumber: registrationData.license_number || registrationData.licenseNumber,
               officialNationalId: registrationData.national_id || registrationData.nationalId,
             });
             this.logger.info(`✅ Company profile created successfully for ${email}`);
@@ -233,6 +247,16 @@ export class AuthService {
           }
         }
 
+        // 5. Create MongoDB profile for newly verified user
+        this.mongoUserProfileService.ensureUserProfile({
+          userId: user.userId,
+          fullName: user.fullName,
+          email: user.email,
+          avatarUrl: user.avatarUrl || null,
+          role: user.role,
+          isActive: true,
+        }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on verify: ${err.message}`));
+
         return { message: 'Email verified and profile activated successfully!' };
       } catch (err) {
         throw new BadRequestException(err.message || 'Invalid or expired code.');
@@ -245,7 +269,8 @@ export class AuthService {
   // ─── Resend Code ──────────────────────────────────────────────
 
   async resendCode(email: string) {
-    const user = await this.usersService.findByEmail(email);
+    const cleanEmail = email?.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(cleanEmail);
     
     if (user) {
       if (user.isActive) return { message: 'Email already verified' };
@@ -260,48 +285,137 @@ export class AuthService {
     throw new NotFoundException('User not found. Please register.');
   }
 
+  // ─── Phone OTP ────────────────────────────────────────────────
+
+  async sendPhoneOtp(email: string, phone: string) {
+    const user = await this.usersService.findByEmail(email);
+    
+    if (user) {
+      if (user.isActive) return { message: 'Account already verified' };
+      
+      const code = this.generateCode();
+      await this.saveOtp(user.userId, code);
+      
+      // Update phone number if it was changed
+      if (user.phone !== phone) {
+        await this.usersService.update(user.userId, { phone });
+      }
+
+      // MOCK SMS SENDING
+      this.logger.info(`📲 [MOCK SMS] Sending OTP ${code} to phone ${phone}`);
+      
+      return { message: 'Verification code sent to your phone' };
+    }
+
+    throw new NotFoundException('User not found. Please register.');
+  }
+
+  async verifyPhoneOtp(email: string, phone: string, code: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (user && user.phone !== phone) {
+      // Update phone number if it was corrected during verification
+      await this.usersService.update(user.userId, { phone });
+    }
+    // The activation logic is identical to email verification
+    return this.verifyEmail(email, code);
+  }
+
+  // ─── Firebase Phone Auth ───────────────────────────────────────
+  async verifyFirebasePhoneToken(email: string, firebaseToken: string) {
+    const cleanEmail = email?.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(cleanEmail);
+    
+    if (!user) throw new NotFoundException('User not found.');
+    if (user.isActive) return { message: 'Account is already verified.' };
+
+    try {
+      // 1. Verify token using Firebase Admin SDK
+      const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
+      
+      const phone = decodedToken.phone_number;
+      if (!phone) {
+        throw new BadRequestException('The provided token does not contain a verified phone number.');
+      }
+
+      // 2. Update user's phone number
+      if (user.phone !== phone) {
+        await this.usersService.update(user.userId, { phone });
+      }
+
+      // 3. Perform the exact same activation logic as verifyEmail
+      if (user.role === 'company' && user.registrationData) {
+        try {
+          const registrationData = JSON.parse(user.registrationData);
+          await this.companiesService.create({
+            name: registrationData.name || registrationData.companyName || user.fullName,
+            contactEmail: user.email,
+            phone: phone,
+            address: registrationData.address || registrationData.companyAddress,
+            crDocumentUrl: registrationData.cr_document_url || registrationData.commercial_register,
+            taxId: registrationData.tax_number || registrationData.taxNumber,
+            taxDocumentUrl: registrationData.tax_document_url,
+            licenseNumber: registrationData.license_number || registrationData.licenseNumber,
+            officialNationalId: registrationData.national_id || registrationData.nationalId,
+          });
+          this.logger.info(`✅ Company profile created successfully for ${email}`);
+        } catch (profileErr: any) {
+          this.logger.warn(`Could not finalize company profile for ${email}: ${profileErr.message}`);
+        }
+      }
+
+      // Activate and Clear staged data
+      await this.usersService.update(user.userId, { 
+        isActive: true,
+        registrationData: "",
+        isPhoneVerified: true
+      });
+
+      // Initialize Profile for individual users
+      if (user.role === 'user' || user.role === 'student') {
+        try {
+          const registrationData = user.registrationData ? JSON.parse(user.registrationData) : {};
+          await this.usersService.update(user.userId, {
+            classification: registrationData.classification || 'job_seeker',
+            location: registrationData.location || '',
+            bio: '', 
+            skills: [],
+          });
+        } catch (profileErr: any) {
+          this.logger.warn(`Could not initialize profile for ${email}: ${profileErr.message}`);
+        }
+      }
+
+      // Create MongoDB profile
+      this.mongoUserProfileService.ensureUserProfile({
+        userId: user.userId,
+        fullName: user.fullName,
+        email: user.email,
+        avatarUrl: user.avatarUrl || null,
+        role: user.role,
+        isActive: true,
+      }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed: ${err.message}`));
+
+      return { message: 'Phone verified and profile activated successfully via Firebase!' };
+    } catch (error: any) {
+      this.logger.error(`Firebase Phone Verification failed: ${error.message}`);
+      throw new BadRequestException('Invalid or expired Firebase token.');
+    }
+  }
+
   // ─── Login ────────────────────────────────────────────────────
 
   async login(data: any) {
-    // 1. Try finding in Users table
-    let user = await this.usersService.findByEmail(data.email);
-
-    if (user) {
-      if (!user.passwordHash) {
-        throw new UnauthorizedException('This account uses Google login. Please sign in with Google.');
-      }
-
-      const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      if (!user.isActive) {
-        throw new UnauthorizedException('Please verify your email before logging in');
-      }
-
-      const payload = {
-        sub: user.userId,
-        email: user.email,
-        role: user.role,
-        name: user.fullName,
-        avatar: user.avatarUrl,
-        banner: user.banner_url,
-        phone: user.phone || null,
-        gender: user.applicantProfile?.gender || null,
-        location: user.location || null,
-        classification: user.classification || null,
-        notificationPreferences: user.notificationPreferences || null,
-      };
-
-      return { access_token: this.jwtService.sign(payload) };
-    }
-
-    // 2. Try finding in Admins table (Unified login)
+    // 1. Try finding in Admins table (Unified login)
     const admin = await this.adminRepo.findOne({ where: { email: data.email } });
     if (admin) {
       const isPasswordValid = await bcrypt.compare(data.password, admin.passwordHash);
       if (!isPasswordValid) {
+        await this.auditLogRepo.save(this.auditLogRepo.create({
+          action: 'FAILED_LOGIN',
+          entity: 'ADMIN',
+          entityId: admin.adminId,
+          metadata: { email: data.email }
+        }));
         throw new UnauthorizedException('Invalid credentials');
       }
 
@@ -322,13 +436,111 @@ export class AuthService {
       return { access_token: this.jwtService.sign(payload) };
     }
 
+    // 2. Try finding in Users table
+    const cleanEmail = data.email?.trim().toLowerCase();
+    let user = await this.usersService.findByEmail(cleanEmail);
+
+    if (user) {
+      if (AdminDashboardService.maintenanceMode) {
+        throw new UnauthorizedException('The system is currently undergoing maintenance. Login is temporarily disabled. Please try again later.');
+      }
+
+      if (!user.passwordHash) {
+        throw new UnauthorizedException('This account uses Google login. Please sign in with Google.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
+      if (!isPasswordValid) {
+        await this.auditLogRepo.save(this.auditLogRepo.create({
+          action: 'FAILED_LOGIN',
+          entity: 'USER',
+          entityId: user.userId,
+          metadata: { email: data.email }
+        }));
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      if (!user.isActive && user.accountStatus === 'active') {
+        throw new UnauthorizedException('Please verify your email before logging in');
+      }
+
+      if (user.accountStatus === 'banned') {
+        throw new UnauthorizedException('This account has been permanently banned.');
+      }
+
+      if (user.accountStatus === 'suspended') {
+        if (user.suspendedUntil && user.suspendedUntil > new Date()) {
+          const daysLeft = Math.ceil((user.suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          throw new UnauthorizedException(`Your account is restricted. You can log in again in ${daysLeft} days.`);
+        } else if (user.suspendedUntil && user.suspendedUntil <= new Date()) {
+          // Restriction expired
+          user.accountStatus = 'active';
+          user.isActive = true;
+          user.suspendedUntil = null;
+          await this.usersService.update(user.userId, { accountStatus: 'active', isActive: true, suspendedUntil: null });
+        }
+      }
+
+      // Block company users whose registration is not yet approved
+      if (user.role === 'company') {
+        const company = await this.companiesService.findByContactEmailOrName(user.email);
+        if (company) {
+          if (company.verificationStatus === 'PENDING') {
+            throw new UnauthorizedException('Your company registration is pending admin approval. Please wait for the admin to review your request.');
+          }
+          if (company.verificationStatus === 'REJECTED') {
+            throw new UnauthorizedException(`Your company registration was rejected. Reason: ${company.rejectionReason || 'Registration requirements not met'}. Please contact support for more information.`);
+          }
+        }
+      }
+
+      // ─── Ensure MongoDB profile exists ───────────────────────
+      this.mongoUserProfileService.ensureUserProfile({
+        userId: user.userId,
+        fullName: user.fullName,
+        email: user.email,
+        avatarUrl: user.avatarUrl || null,
+        bannerUrl: user.banner_url || null,
+        role: user.role,
+        phone: user.phone || null,
+        location: user.location || null,
+        classification: user.classification || null,
+        isActive: user.isActive,
+      }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on login: ${err.message}`));
+
+      const payload: any = {
+        sub: user.userId,
+        email: user.email,
+        role: user.role,
+        name: user.fullName,
+        avatar: user.avatarUrl,
+        banner: user.banner_url,
+        phone: user.phone || null,
+        gender: user.applicantProfile?.gender || null,
+        location: user.location || null,
+        classification: user.classification || null,
+        notificationPreferences: user.notificationPreferences || null,
+        services: user.services || [],
+        criminalRecordUrl: user.criminalRecordUrl || null,
+      };
+
+      // If user is admin in the main table, add admin claims so they can pass Admin guards
+      if (user.role === 'admin') {
+        payload.adminId = user.userId;
+        payload.adminRole = 'super_admin'; // Default to super_admin for legacy main-table admins
+      }
+
+      return { access_token: this.jwtService.sign(payload) };
+    }
+
     throw new UnauthorizedException('Invalid credentials');
   }
 
   // ─── Forgot Password ─────────────────────────────────────────
 
   async forgotPassword(email: string) {
-    const user = await this.usersService.findByEmail(email);
+    const cleanEmail = email?.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(cleanEmail);
     if (!user) throw new NotFoundException('User not found');
 
     const code = this.generateCode();
@@ -357,6 +569,10 @@ export class AuthService {
   // ─── Google Login ─────────────────────────────────────────────
 
   async validateGoogleUser(token: string) {
+    if (AdminDashboardService.maintenanceMode) {
+      throw new UnauthorizedException('The system is currently undergoing maintenance. Login is temporarily disabled. Please try again later.');
+    }
+
     try {
       let email: string | undefined;
       let name: string | undefined;
@@ -418,6 +634,36 @@ export class AuthService {
 
       if (!user) throw new UnauthorizedException('User could not be found or created');
 
+      if (user.accountStatus === 'banned') {
+        throw new UnauthorizedException('This account has been permanently banned.');
+      }
+
+      if (user.accountStatus === 'suspended') {
+        if (user.suspendedUntil && user.suspendedUntil > new Date()) {
+          const daysLeft = Math.ceil((user.suspendedUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          throw new UnauthorizedException(`Your account is restricted. You can log in again in ${daysLeft} days.`);
+        } else if (user.suspendedUntil && user.suspendedUntil <= new Date()) {
+          user.accountStatus = 'active';
+          user.isActive = true;
+          user.suspendedUntil = null;
+          await this.usersService.update(user.userId, { accountStatus: 'active', isActive: true, suspendedUntil: null });
+        }
+      }
+
+      // ─── Ensure MongoDB profile exists ───────────────────────
+      this.mongoUserProfileService.ensureUserProfile({
+        userId: user.userId,
+        fullName: user.fullName,
+        email: user.email,
+        avatarUrl: user.avatarUrl || null,
+        bannerUrl: user.banner_url || null,
+        role: user.role,
+        phone: user.phone || null,
+        location: user.location || null,
+        classification: user.classification || null,
+        isActive: user.isActive,
+      }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on Google login: ${err.message}`));
+
       const jwtPayload = {
         sub: user.userId,
         email: user.email,
@@ -431,6 +677,8 @@ export class AuthService {
         classification: user.classification || null,
         notificationPreferences: user.notificationPreferences || null,
         deletionRequestedAt: user.deletionRequestedAt || null,
+        services: user.services || [],
+        criminalRecordUrl: user.criminalRecordUrl || null,
       };
 
       return {
@@ -504,6 +752,8 @@ export class AuthService {
       classification: user.classification || null,
       notificationPreferences: user.notificationPreferences || null,
       deletionRequestedAt: user.deletionRequestedAt || null,
+      services: user.services || [],
+      criminalRecordUrl: user.criminalRecordUrl || null,
     };
 
     return {

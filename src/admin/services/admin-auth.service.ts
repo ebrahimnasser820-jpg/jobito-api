@@ -187,15 +187,27 @@ export class AdminAuthService {
     description: string,
     metadata?: any,
   ) {
-    const log = this.activityLogRepo.create({
-      adminId,
-      actionType,
-      targetEntity,
-      targetId,
-      description,
-      metadata,
-    });
-    return this.activityLogRepo.save(log);
+    try {
+      // Check if admin exists in the admins table to avoid FK violations
+      const adminExists = await this.adminRepo.findOne({ where: { adminId } });
+      
+      const log = this.activityLogRepo.create({
+        adminId: adminExists ? adminId : null,
+        actionType,
+        targetEntity,
+        targetId,
+        description,
+        metadata: {
+          ...metadata,
+          originalAdminId: adminId,
+          isLegacyAdmin: !adminExists
+        },
+      });
+      return await this.activityLogRepo.save(log);
+    } catch (err) {
+      console.error('Failed to log admin activity:', err.message);
+      // Don't throw, we want the main action to succeed even if logging fails
+    }
   }
 
   async getActivityLogs(page = 1, limit = 20) {

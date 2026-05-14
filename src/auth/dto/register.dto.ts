@@ -58,6 +58,10 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
+  tax_document_url?: string;
+
+  @IsOptional()
+  @IsString()
   commercial_register?: string;
 
   @IsOptional()

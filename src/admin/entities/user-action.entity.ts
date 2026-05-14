@@ -14,6 +14,7 @@ export enum UserActionType {
   BAN = 'ban',
   UNSUSPEND = 'unsuspend',
   UNBAN = 'unban',
+  DELETE = 'delete',
 }
 
 @Entity({ schema: 'ptj', name: 'user_actions' })

@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
@@ -10,9 +11,12 @@ import { User } from '../users/user.entity.js';
 import { ApplicantProfile } from '../users/applicant-profile.entity.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { AiMonitoringService } from '../audit-logs/ai-monitoring.service.js';
+import { PushService } from '../notifications/push.service.js';
 
 @Injectable()
 export class ApplicationsService {
+  private readonly logger = new Logger(ApplicationsService.name);
+
   constructor(
     @InjectRepository(Application)
     private repo: Repository<Application>,
@@ -22,6 +26,7 @@ export class ApplicationsService {
     private profileRepo: Repository<ApplicantProfile>,
     private jobsService: JobsService,
     private aiMonitoringService: AiMonitoringService,
+    private pushService: PushService,
   ) {}
 
   async apply(userId: string, jobId: number, data?: { portfolioUrl?: string; address?: string; coverLetter?: string; resumeUrl?: string }) {
@@ -35,9 +40,11 @@ export class ApplicationsService {
 
     // Check slots (fallback to 10 if slotsAvailable is null/undefined)
     const maxSlots = job.slotsAvailable || 10;
-    const appliedCount = await this.jobsService.getApplicationCount(jobId);
-    if (appliedCount >= maxSlots) {
-      throw new BadRequestException('هذه الوظيفة وصلت الحد الأقصى للمتقدمين');
+    const acceptedCount = await this.repo.count({
+      where: { jobId, status: 'accepted' },
+    });
+    if (acceptedCount >= maxSlots) {
+      throw new BadRequestException('هذه الوظيفة اكتفت بالعدد المطلوب من المقبولين');
     }
 
     // Check if already applied
@@ -71,6 +78,9 @@ export class ApplicationsService {
       resumeUrl: finalResumeUrl,
     });
     await this.repo.save(application);
+
+    // ─── Push Notification: Notify job owner about new application ───
+    this.notifyJobOwnerNewApplication(job, userId).catch(() => {});
 
     return { message: 'Application submitted successfully' };
   }
@@ -235,8 +245,8 @@ export class ApplicationsService {
       app.status = status;
       await this.repo.save(app);
 
-      // Close job if it's a tradesman job (usually one-person) or if max slots are reached
-      if (isTradesmanJob || acceptedCount + 1 >= maxSlots) {
+      // Close job when max slots are reached (for both company jobs and tradesman services)
+      if (acceptedCount + 1 >= maxSlots) {
         console.log(`🔒 [updateStatus] Closing Job ${app.jobId} as it is now filled.`);
         await this.jobsService.update(Number(app.jobId), { isActive: false });
       }
@@ -247,6 +257,9 @@ export class ApplicationsService {
     
     const updated = app;
     console.log(`✅ [updateStatus] Update successful for App ${applicationId}`);
+
+    // ─── Push Notification: Notify applicant about status change ───
+    this.notifyApplicantStatusChange(app.userId, status, app.job?.title || '').catch(() => {});
 
     // Log the decision in audit logs
     try {
@@ -290,5 +303,66 @@ export class ApplicationsService {
     return this.repo.findOne({
       where: { userId, jobId },
     });
+  }
+
+  // ─── Push Notification Helpers ─────────────────────────────────────
+
+  /**
+   * Notify job owner (company user or tradesman) when someone applies
+   */
+  private async notifyJobOwnerNewApplication(job: any, applicantUserId: string) {
+    try {
+      const applicant = await this.userRepo.findOne({
+        where: { userId: applicantUserId },
+        select: ['fullName'],
+      });
+      const applicantName = applicant?.fullName || 'شخص ما';
+      const jobTitle = job.title || 'وظيفة';
+
+      // Determine who owns the job
+      const ownerId = job.userId; // For tradesman jobs
+      if (ownerId) {
+        await this.pushService.sendPushToUser(ownerId, 
+          '📋 طلب جديد!',
+          `${applicantName} قدم على "${jobTitle}"`,
+          { type: 'new_application', url: '/applications', jobId: String(job.jobId) },
+        );
+      }
+    } catch (err) {
+      this.logger.warn(`⚠️ Failed to send new application push: ${err.message}`);
+    }
+  }
+
+  /**
+   * Notify applicant when their application status changes
+   */
+  private async notifyApplicantStatusChange(applicantUserId: string, newStatus: string, jobTitle: string) {
+    try {
+      const statusLower = newStatus.toLowerCase();
+      let title = '';
+      let body = '';
+
+      if (statusLower === 'accepted' || statusLower === 'hired') {
+        title = '🎉 مبروك! تم قبولك';
+        body = `تم قبول طلبك على وظيفة "${jobTitle}"`;
+      } else if (statusLower === 'rejected') {
+        title = '😔 تحديث على طلبك';
+        body = `للأسف لم يتم قبول طلبك على وظيفة "${jobTitle}"`;
+      } else if (statusLower === 'pending' || statusLower === 'under_review') {
+        title = '⏳ طلبك قيد المراجعة';
+        body = `طلبك على وظيفة "${jobTitle}" قيد المراجعة الآن`;
+      } else {
+        title = '📋 تحديث على طلبك';
+        body = `تم تحديث حالة طلبك على "${jobTitle}" إلى: ${newStatus}`;
+      }
+
+      await this.pushService.sendPushToUser(applicantUserId, title, body, {
+        type: 'application_status',
+        status: newStatus,
+        url: '/my-applications',
+      });
+    } catch (err) {
+      this.logger.warn(`⚠️ Failed to send status change push: ${err.message}`);
+    }
   }
 }

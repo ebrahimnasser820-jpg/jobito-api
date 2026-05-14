@@ -13,8 +13,8 @@ export class AdminActivityLog {
   @PrimaryGeneratedColumn({ name: 'log_id' })
   logId: number;
 
-  @Column({ name: 'admin_id', type: 'uuid' })
-  adminId: string;
+  @Column({ name: 'admin_id', type: 'uuid', nullable: true })
+  adminId: string | null;
 
   @ManyToOne(() => Admin, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'admin_id' })

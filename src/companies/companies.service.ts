@@ -5,6 +5,7 @@ import { Company } from './company.entity.js';
 import { CreateCompanyDto } from './dto/create-company.dto.js';
 import { UpdateCompanyDto } from './dto/update-company.dto.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
+import { MongoCompanyProfileService } from './mongo-company-profile.service.js';
 
 @Injectable()
 export class CompaniesService {
@@ -14,6 +15,7 @@ export class CompaniesService {
     @InjectRepository(AuditLog)
     private auditLogRepo: Repository<AuditLog>,
     private dataSource: DataSource,
+    private mongoCompanyService: MongoCompanyProfileService,
   ) {}
 
   async findAll(filters: any) {
@@ -95,13 +97,47 @@ export class CompaniesService {
 
   async create(data: CreateCompanyDto) {
     const company = this.repo.create(data);
-    return this.repo.save(company);
+    const saved = await this.repo.save(company);
+    
+    // ─── Sync to MongoDB ──────────────────────────────────────
+    this.mongoCompanyService.ensureCompanyProfile({
+      companyId: saved.companyId,
+      name: saved.name,
+      contactEmail: saved.contactEmail,
+      logoUrl: saved.logoUrl,
+      description: saved.description,
+      address: saved.address,
+      phone: saved.phone,
+      industry: saved.industry,
+      classification: saved.classification,
+      website: saved.website,
+      verificationStatus: saved.verificationStatus,
+    }).catch(err => console.warn(`⚠️ MongoDB company profile sync failed on create: ${err.message}`));
+
+    return saved;
   }
 
   async update(id: number, data: UpdateCompanyDto) {
     const company = await this.findOne(id);
     Object.assign(company, data);
-    return this.repo.save(company);
+    const saved = await this.repo.save(company);
+
+    // ─── Sync to MongoDB ──────────────────────────────────────
+    this.mongoCompanyService.ensureCompanyProfile({
+      companyId: saved.companyId,
+      name: saved.name,
+      contactEmail: saved.contactEmail,
+      logoUrl: saved.logoUrl,
+      description: saved.description,
+      address: saved.address,
+      phone: saved.phone,
+      industry: saved.industry,
+      classification: saved.classification,
+      website: saved.website,
+      verificationStatus: saved.verificationStatus,
+    }).catch(err => console.warn(`⚠️ MongoDB company profile sync failed on update: ${err.message}`));
+
+    return saved;
   }
 
   async getDashboardSummary(id: number) {

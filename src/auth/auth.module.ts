@@ -11,6 +11,8 @@ import { JwtStrategy } from './jwt.strategy.js';
 import { OtpCode } from './otp-code.entity.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { Admin } from '../admin/entities/admin.entity.js';
+import { AuditLog } from '../audit-logs/audit-log.entity.js';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
 
 @Global()
 @Module({
@@ -19,7 +21,8 @@ import { Admin } from '../admin/entities/admin.entity.js';
     ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     CompaniesModule,
-    TypeOrmModule.forFeature([OtpCode, Admin]),
+    TypeOrmModule.forFeature([OtpCode, Admin, AuditLog]),
+    AuditLogsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

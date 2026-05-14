@@ -54,7 +54,7 @@ export class UsersController {
         if (body.email !== undefined) updateData.email = body.email;
         if (body.phone !== undefined) updateData.phone = body.phone;
         if (body.notificationPreferences !== undefined) {
-            updateData.notificationPreferences = body.notificationPreferences;
+            updateData.notificationPreferences = body.notificationPreferences as { applications: boolean; jobs: boolean; recs: boolean };
         }
         if (body.avatarUrl !== undefined) updateData.avatarUrl = body.avatarUrl;
         if (body.avatar !== undefined) updateData.avatarUrl = body.avatar; // Handle both aliases
@@ -70,6 +70,12 @@ export class UsersController {
         if (body.socialLinks !== undefined) updateData.socialLinks = body.socialLinks;
         if (body.languages !== undefined) updateData.languages = body.languages;
         if (body.services !== undefined) updateData.services = body.services;
+        if (body.criminalRecordUrl !== undefined) {
+            updateData.criminalRecordUrl = body.criminalRecordUrl;
+            if (body.criminalRecordUrl) {
+                updateData.accountStatus = 'pending';
+            }
+        }
         if (body.location !== undefined) updateData.location = body.location;
         if (body.themePreference !== undefined) updateData.themePreference = body.themePreference;
         if (body.languagePreference !== undefined) updateData.languagePreference = body.languagePreference;

@@ -39,6 +39,9 @@ export class Company {
   @Column({ name: 'cr_document_url', type: 'text', nullable: true })
   crDocumentUrl: string;
 
+  @Column({ name: 'tax_document_url', type: 'text', nullable: true })
+  taxDocumentUrl: string;
+
   @Column({ name: 'verification_status', length: 50, default: 'PENDING' })
   verificationStatus: string;
 

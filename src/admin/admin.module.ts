@@ -38,6 +38,7 @@ import { AdminRolesGuard } from './guards/admin-roles.guard.js';
 
 // External modules
 import { MailModule } from '../mail/mail.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { MailModule } from '../mail/mail.module.js';
       }),
     }),
     MailModule,
+    NotificationsModule,
   ],
   controllers: [AdminAuthController, AdminOpsController],
   providers: [
@@ -77,6 +79,6 @@ import { MailModule } from '../mail/mail.module.js';
     AdminJwtStrategy,
     AdminRolesGuard,
   ],
-  exports: [AdminAuthService],
+  exports: [AdminAuthService, AdminContentManagementService],
 })
 export class AdminModule {}

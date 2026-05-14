@@ -35,6 +35,21 @@ export class AdminSystemRequestService {
     };
   }
 
+  async listRequestsByRequester(requesterId: string) {
+    const requests = await this.requestRepo.find({
+      where: { requesterId },
+      relations: ['requester'],
+      order: { createdAt: 'DESC' },
+    });
+    return {
+      data: requests.map(r => ({
+        requestId: r.requestId, requestType: r.requestType, candidateName: r.candidateName,
+        candidateEmail: r.candidateEmail, reason: r.reason, status: r.status,
+        requesterName: r.requester?.fullName, createdAt: r.createdAt,
+      })),
+    };
+  }
+
   async reviewRequest(reviewerId: string, requestId: number, action: 'approve' | 'reject', reviewNote?: string) {
     const request = await this.requestRepo.findOne({ where: { requestId } });
     if (!request) throw new NotFoundException('Request not found');

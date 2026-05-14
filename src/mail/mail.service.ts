@@ -113,7 +113,7 @@ export class MailService {
     });
   }
 
-  /** Generic send mail (plain text) */
+  /** Send generic mail (plain text) */
   async sendMail(to: string, subject: string, text: string): Promise<void> {
     await this.transporter.sendMail({
       from: `"Jobito" <${process.env.MAIL_USER}>`,
@@ -122,4 +122,124 @@ export class MailService {
       text,
     });
   }
+
+  /** Send account moderation notification (Warning, Suspend, Ban) */
+  async sendModerationEmail(to: string, name: string, reason: string, actionType: string): Promise<void> {
+    let title = '';
+    let emoji = '';
+    let actionDesc = '';
+    let color = '';
+    let bgColor = '';
+
+    if (actionType === 'WARNING') {
+      title = 'Account Warning';
+      emoji = '⚠️';
+      color = '#f59e0b';
+      bgColor = '#fef3c7';
+      actionDesc = 'This is an official warning regarding your recent activity. No restrictions have been applied yet, but further violations may lead to account suspension.';
+    } else if (actionType === 'SUSPEND') {
+      title = 'Account Temporarily Restricted';
+      emoji = '⏸️';
+      color = '#f97316';
+      bgColor = '#ffedd5';
+      actionDesc = 'A temporary restriction is necessary. Your account will remain restricted for <b>10 days</b>.';
+    } else {
+      // BAN
+      title = 'Account Permanently Banned';
+      emoji = '🛑';
+      color = '#ef4444';
+      bgColor = '#fee2e2';
+      actionDesc = 'Your account has been permanently banned due to severe or repeated violations of our terms of service.';
+    }
+
+    await this.transporter.sendMail({
+      from: `"Jobito Safety" <${process.env.MAIL_USER}>`,
+      to,
+      subject: `Jobito — ${title}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 40px; background: #ffffff; border: 1px solid ${bgColor}; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: ${bgColor}; color: ${color}; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; font-size: 32px; margin-bottom: 16px;">${emoji}</div>
+            <h1 style="color: #111827; font-size: 22px; font-weight: 800; margin: 0;">${title}</h1>
+          </div>
+          
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            Hello <b>${name}</b>,
+          </p>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            ${actionDesc}
+          </p>
+
+          <div style="background: #f9fafb; border-left: 4px solid ${color}; padding: 20px; margin: 24px 0; border-radius: 4px;">
+            <p style="font-size: 13px; color: #6b7280; font-weight: 700; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px;">Reason for Action</p>
+            <p style="font-size: 15px; color: #1f2937; margin: 0; font-style: italic;">"${reason}"</p>
+          </div>
+
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">
+            Jobito is committed to a safe and professional environment.
+          </p>
+          
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            If you believe this was a mistake, please reply to this email or contact support.
+          </p>
+        </div>
+      `,
+    });
+  }
+
+  /** Send review result email (Approve/Reject) */
+  async sendReviewResultEmail(to: string, name: string, entityType: 'Company' | 'Criminal Record', action: 'approve' | 'reject', reason?: string): Promise<void> {
+    const isApprove = action === 'approve';
+    const title = isApprove ? 'Review Approved ✅' : 'Review Rejected ❌';
+    const color = isApprove ? '#10b981' : '#ef4444';
+    const bgColor = isApprove ? '#d1fae5' : '#fee2e2';
+    
+    let message = '';
+    if (entityType === 'Company') {
+      message = isApprove 
+        ? 'Congratulations! Your company registration has been approved. You can now access all employer features.'
+        : 'Unfortunately, your company registration request was rejected. Please review the requirements or contact support for further assistance.';
+    } else {
+      message = isApprove
+        ? 'Congratulations! Your criminal record document has been verified. Your worker account is now active and ready to use.'
+        : 'Unfortunately, your criminal record document was rejected. Your worker account access has been restricted. Please upload a valid document or contact support.';
+    }
+
+    await this.transporter.sendMail({
+      from: `"Jobito Operations" <${process.env.MAIL_USER}>`,
+      to,
+      subject: `Jobito — ${title}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 40px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: ${bgColor}; color: ${color}; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; font-size: 32px; margin-bottom: 16px;">
+              ${isApprove ? '✅' : '❌'}
+            </div>
+            <h1 style="color: #111827; font-size: 22px; font-weight: 800; margin: 0;">${title}</h1>
+          </div>
+          
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            Hello <b>${name}</b>,
+          </p>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            ${message}
+          </p>
+
+          ${!isApprove && reason ? `
+          <div style="background: #f9fafb; border-left: 4px solid ${color}; padding: 20px; margin: 24px 0; border-radius: 4px;">
+            <p style="font-size: 13px; color: #6b7280; font-weight: 700; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px;">Reason for Rejection</p>
+            <p style="font-size: 15px; color: #1f2937; margin: 0; font-style: italic;">"${reason}"</p>
+          </div>
+          ` : ''}
+
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            Thank you for choosing Jobito.
+          </p>
+        </div>
+      `,
+    });
+  }
 }
+

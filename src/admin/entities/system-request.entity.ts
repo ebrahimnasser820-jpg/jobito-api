@@ -17,6 +17,7 @@ export enum SystemRequestStatus {
 
 export enum SystemRequestType {
   ADD_OPERATION_MANAGER = 'add_operation_manager',
+  ADD_ASSISTANT = 'ADD_ASSISTANT',
   ROLE_UPGRADE = 'role_upgrade',
 }
 

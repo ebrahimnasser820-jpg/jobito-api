@@ -2,8 +2,11 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, ILike } from 'typeorm';
 import { User } from '../../users/user.entity.js';
+import { Company } from '../../companies/company.entity.js';
 import { UserAction, UserActionType } from '../entities/user-action.entity.js';
 import { AdminAuthService } from './admin-auth.service.js';
+import { NotificationsService } from '../../notifications/notifications.service.js';
+import { MailService } from '../../mail/mail.service.js';
 
 @Injectable()
 export class AdminUserManagementService {
@@ -13,6 +16,8 @@ export class AdminUserManagementService {
     @InjectRepository(UserAction)
     private userActionRepo: Repository<UserAction>,
     private adminAuthService: AdminAuthService,
+    private notificationsService: NotificationsService,
+    private mailService: MailService,
     private dataSource: DataSource,
   ) {}
 
@@ -39,6 +44,8 @@ export class AdminUserManagementService {
         'user.createdAt',
       ]);
 
+    qb.leftJoin(Company, 'company', '"company"."contact_email" = "user"."email" AND "user"."role" = \'company\'');
+
     if (search) {
       qb.andWhere(
         '(LOWER(user.fullName) LIKE LOWER(:search) OR LOWER(user.email) LIKE LOWER(:search) OR user.phone LIKE :search)',
@@ -56,6 +63,11 @@ export class AdminUserManagementService {
       } else {
         qb.andWhere('user.accountStatus = :status', { status });
       }
+    } else {
+      // Hide banned and rejected users from the default list
+      qb.andWhere('("user"."account_status" NOT IN (:...hidden) OR "user"."account_status" IS NULL)', { hidden: ['banned', 'rejected'] });
+      // Only show companies that are APPROVED
+      qb.andWhere('("user"."role" != \'company\' OR "company"."verification_status" = \'APPROVED\')');
     }
 
     qb.orderBy('user.createdAt', 'DESC');
@@ -167,17 +179,32 @@ export class AdminUserManagementService {
         break;
       case UserActionType.SUSPEND:
         newStatus = 'suspended';
+        user.isActive = false; // Block login
+        user.suspendedUntil = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000); // 10 days suspension
         break;
       case UserActionType.BAN:
         newStatus = 'banned';
         user.isActive = false;
+        user.suspendedUntil = null;
+        // Erase personal data but keep email and phone
+        user.fullName = 'Banned User';
+        user.passwordHash = 'BANNED';
+        user.avatarUrl = '';
         break;
       case UserActionType.UNSUSPEND:
         newStatus = 'active';
+        user.isActive = true;
+        user.suspendedUntil = null;
         break;
       case UserActionType.UNBAN:
         newStatus = 'active';
         user.isActive = true;
+        break;
+      case UserActionType.DELETE:
+        newStatus = 'banned';
+        user.isActive = false;
+        user.fullName = 'Deleted User';
+        user.passwordHash = 'DELETED';
         break;
       default:
         throw new BadRequestException('Invalid action type');
@@ -205,8 +232,35 @@ export class AdminUserManagementService {
       { previousStatus: user.accountStatus, newStatus },
     );
 
+    // Notify the user via internal system
+    await this.notificationsService.sendNotification(
+      user.userId,
+      `Account Action: ${actionType.toUpperCase()}`,
+      `Your account has been ${newStatus}. Reason: ${reason || 'Violation of terms.'}`,
+      'SYSTEM'
+    );
+
+    // Send Gmail Notification as requested
+    try {
+      if (
+        actionType === UserActionType.WARNING ||
+        actionType === UserActionType.SUSPEND ||
+        actionType === UserActionType.BAN ||
+        actionType === UserActionType.DELETE
+      ) {
+        await this.mailService.sendModerationEmail(
+          user.email,
+          user.fullName,
+          reason || 'Violation of terms of service.',
+          actionType
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send moderation email:', error);
+    }
+
     return {
-      message: `User ${user.fullName} has been ${actionType}${actionType === 'warning' ? 'ed' : 'ed'}.`,
+      message: `User ${user.fullName} is now ${newStatus}.`,
       newStatus,
     };
   }

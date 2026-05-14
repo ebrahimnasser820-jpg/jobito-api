@@ -62,6 +62,10 @@ export class CreateCompanyDto {
     crDocumentUrl?: string;
 
     @IsOptional()
+    @IsString()
+    taxDocumentUrl?: string;
+
+    @IsOptional()
     socialLinks?: any;
 
     @IsOptional()

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsEmail, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
 import { SystemRequestType } from '../entities/system-request.entity.js';
 
 export class CreateSystemRequestDto {
@@ -10,7 +10,7 @@ export class CreateSystemRequestDto {
   @IsNotEmpty()
   candidateName: string;
 
-  @IsEmail()
+  @IsString()
   @IsNotEmpty()
   candidateEmail: string;
 

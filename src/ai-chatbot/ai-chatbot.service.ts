@@ -11,7 +11,7 @@ import axios from 'axios';
 @Injectable()
 export class AiChatbotService {
   private readonly logger = new Logger(AiChatbotService.name);
-  private readonly pythonUrl = process.env.PYTHON_CHATBOT_URL || 'http://localhost:5000/chat';
+  private readonly pythonUrl = process.env.PYTHON_CHATBOT_URL;
 
   constructor(
     private readonly httpService: HttpService,
@@ -35,7 +35,7 @@ export class AiChatbotService {
       */
 
       // 2. Call Python ChatBot with Streaming
-      const response = await axios.post(this.pythonUrl, {
+      const response = await axios.post(this.pythonUrl as string, {
         message,
         user_id: userId,
         history: history.slice(-10),

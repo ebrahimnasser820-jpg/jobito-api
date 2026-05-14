@@ -103,6 +103,9 @@ export class User {
   @Column({ name: 'account_status', length: 20, default: 'active' })
   accountStatus: string; // 'active', 'warned', 'suspended', 'banned'
 
+  @Column({ name: 'suspended_until', type: 'timestamptz', nullable: true })
+  suspendedUntil: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

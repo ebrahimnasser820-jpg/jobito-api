@@ -22,12 +22,13 @@ export class AdminContentManagementService {
     return {
       data: reports.map((r) => ({
         reportId: r.reportId, postOwner: r.postOwnerName, postOwnerId: r.postOwnerId,
-        content: r.contentText, contentType: r.contentType, contentId: r.contentId,
+        content: r.contentText || r.customReason || "Reported Profile/Item", 
+        contentType: r.contentType, contentId: r.contentId,
         reason: r.reason, customReason: r.customReason, status: r.status, createdAt: r.createdAt,
       })),
       total, page, limit, totalPages: Math.ceil(total / limit),
     };
-  }
+  } 
 
   async reviewContent(adminId: string, reportId: number, action: 'delete' | 'dismiss') {
     const report = await this.reportedContentRepo.findOne({ where: { reportId } });

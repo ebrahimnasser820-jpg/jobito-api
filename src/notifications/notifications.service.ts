@@ -1,12 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MailService } from '../mail/mail.service.js';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { PushService } from './push.service.js';
+
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Notification } from './entities/notification.entity.js';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly mailService: MailService) {}
+  constructor(
+    private readonly mailService: MailService,
+    private readonly pushService: PushService,
+    @InjectRepository(Notification)
+    private readonly notificationRepo: Repository<Notification>,
+  ) {}
 
   @EventPattern('user_registered')
   async handleUserRegistered(@Payload() data: { email: string; code: string }) {
@@ -29,9 +39,28 @@ export class NotificationsService {
     // Future implementation for notifying companies
   }
 
-  async sendNotification(userId: string, title: string, message: string, extraData?: any) {
+  async sendNotification(userId: string, title: string, message: string, type?: string) {
     this.logger.log(`🔔 Internal Notification for ${userId}: ${title} - ${message}`);
-    // Here we can store in DB or send via Push/Email
+    
+    const notification = this.notificationRepo.create({
+      userId,
+      title,
+      message,
+      type: type || 'SYSTEM',
+    });
+
+    await this.notificationRepo.save(notification);
+
+    // ─── Also send Push Notification (FCM + Web Push) ───────────
+    try {
+      await this.pushService.sendPushToUser(userId, title, message, {
+        type: type || 'SYSTEM',
+        notificationId: String(notification.id),
+      });
+    } catch (err) {
+      this.logger.warn(`⚠️ Push notification failed for ${userId}: ${err.message}`);
+    }
+
     return { success: true };
   }
 }

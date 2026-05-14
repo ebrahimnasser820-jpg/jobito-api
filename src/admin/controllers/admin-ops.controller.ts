@@ -48,6 +48,7 @@ export class AdminOpsController {
   // ─── Company Review ──────────────────────────────────────────
   @Get('companies/pending')
   async getPendingCompanies() {
+    console.log('--- ADMIN OPS: Fetching pending companies ---');
     return this.companyReviewService.getPendingCompanies();
   }
 
@@ -63,6 +64,7 @@ export class AdminOpsController {
 
   @Get('companies')
   async listAllCompanies(@Query('status') status?: string) {
+    console.log(`--- ADMIN OPS: Fetching all companies (status: ${status || 'all'}) ---`);
     return this.companyReviewService.listAllCompanies(status);
   }
 
@@ -98,9 +100,26 @@ export class AdminOpsController {
     return this.supportService.closeTicket(admin.adminId, parseInt(id));
   }
 
-  // ─── System Request (Ops Manager can create) ─────────────────
+  // ─── System Request (Ops Manager can create & view own) ─────────────────
+  @Get('system-requests')
+  async listMySystemRequests(@CurrentUser() admin: any) {
+    return this.systemRequestService.listRequestsByRequester(admin.adminId);
+  }
+
   @Post('system-request')
   async createSystemRequest(@CurrentUser() admin: any, @Body() dto: CreateSystemRequestDto) {
     return this.systemRequestService.createRequest(admin.adminId, dto);
   }
+
+  // ─── Criminal Record Review ─────────────────────────────────────
+  @Get('criminal-records')
+  async getTradesmenCriminalRecords(@Query('status') status?: string) {
+    return this.companyReviewService.getTradesmenWithCriminalRecords(status);
+  }
+
+  @Post('criminal-records/review')
+  async reviewCriminalRecord(@CurrentUser() admin: any, @Body() body: { userId: string; action: 'approve' | 'reject'; reason?: string }) {
+    return this.companyReviewService.reviewCriminalRecord(admin.adminId, body.userId, body.action, body.reason);
+  }
 }
+

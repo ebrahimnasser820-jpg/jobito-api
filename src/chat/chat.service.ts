@@ -1,20 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, In } from 'typeorm';
 import { ChatMessage } from './chat-message.entity.js';
 import { AppGateway } from '../common/gateways/app.gateway.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { PushService } from '../notifications/push.service.js';
 import { User } from '../users/user.entity.js';
 
 @Injectable()
 export class ChatService {
+    private readonly logger = new Logger(ChatService.name);
+
     constructor(
         @InjectRepository(ChatMessage) private chatRepository: Repository<ChatMessage>,
         @InjectRepository(User) private usersRepository: Repository<User>,
         private readonly gateway: AppGateway,
         private readonly jobsService: JobsService,
         private readonly notificationsService: NotificationsService,
+        private readonly pushService: PushService,
     ) {}
 
     // P2P Messaging (The main one for ChatApp)
@@ -34,6 +38,9 @@ export class ChatService {
         // Also notify sender (for multi-device sync)
         this.gateway.notifyNewP2PMessage(senderId, saved);
 
+        // ─── Push Notification to recipient ───────────────────────
+        this.sendChatPushNotification(senderId, recipientId, content, 'text').catch(() => {});
+
         return saved;
     }
 
@@ -51,6 +58,9 @@ export class ChatService {
         
         this.gateway.notifyNewP2PMessage(recipientId, saved);
         this.gateway.notifyNewP2PMessage(senderId, saved);
+
+        // ─── Push Notification to recipient ───────────────────────
+        this.sendChatPushNotification(senderId, recipientId, '🎤 Voice message', 'voice').catch(() => {});
 
         return saved;
     }
@@ -213,5 +223,31 @@ export class ChatService {
             skip: (page - 1) * limit,
             take: limit
         });
+    }
+
+    // ─── Push Notification Helper ────────────────────────────────────
+    private async sendChatPushNotification(senderId: string, recipientId: string, content: string, type: string) {
+        try {
+            // Get sender name
+            const sender = await this.usersRepository.findOne({
+                where: { userId: senderId },
+                select: ['fullName'],
+            });
+
+            const senderName = sender?.fullName || 'Someone';
+            const title = `💬 ${senderName}`;
+            const body = type === 'voice' ? '🎤 Voice message' :
+                         type === 'image' ? '📷 Image' :
+                         type === 'file'  ? '📎 File' :
+                         content.length > 100 ? content.substring(0, 100) + '...' : content;
+
+            await this.pushService.sendPushToUser(recipientId, title, body, {
+                type: 'chat_message',
+                senderId,
+                url: '/chat',
+            });
+        } catch (err) {
+            this.logger.warn(`⚠️ Chat push notification failed: ${err.message}`);
+        }
     }
 }
