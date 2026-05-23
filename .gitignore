@@ -59,3 +59,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 /uploads
 
 /src/generated/prisma
+
+# Firebase Service Account Credentials
+jobito-bc3a2-firebase-adminsdk-fbsvc-687b1496cf.json
+
