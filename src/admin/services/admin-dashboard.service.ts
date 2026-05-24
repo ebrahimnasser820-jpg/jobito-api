@@ -75,6 +75,9 @@ export class AdminDashboardService {
       else if (r.role === 'company') distribution.companies += parseInt(r.count);
     });
 
+    // Calculate placeholder revenue (e.g. 1500 per active company)
+    const operationsRevenue = totalCompanies * 1500;
+
     return {
       activeUsers,
       operationsCount: weeklyOperations,
@@ -82,6 +85,7 @@ export class AdminDashboardService {
       activeSecurityAlerts: securityAlerts,
       totalCompanies,
       activeJobs,
+      operationsRevenue,
       usersByRole: usersByRoleRaw,
       userDistribution: distribution,
     };

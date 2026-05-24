@@ -1,6 +1,17 @@
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { TranslationsService } from './translations.service.js';
 import { TranslationEngineService } from './translation-engine.service.js';
+import { IsArray, IsString, IsIn } from 'class-validator';
+
+export class TranslateBatchDto {
+  @IsArray()
+  @IsString({ each: true })
+  texts: string[];
+
+  @IsString()
+  @IsIn(['ar', 'en'])
+  target_lang: 'ar' | 'en';
+}
 
 @Controller('translations')
 export class TranslationsController {
@@ -17,7 +28,7 @@ export class TranslationsController {
 
   @Post('batch')
   async translateBatch(
-    @Body() body: { texts: string[]; target_lang: 'ar' | 'en' }
+    @Body() body: TranslateBatchDto
   ) {
     try {
       const { texts, target_lang } = body;

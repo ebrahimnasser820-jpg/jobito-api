@@ -24,7 +24,7 @@ import { Admin } from '../admin/entities/admin.entity.js';
 import { AdminDashboardService } from '../admin/services/admin-dashboard.service.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
 import * as admin from 'firebase-admin';
-
+import { Vonage } from '@vonage/server-sdk';
 @Injectable()
 export class AuthService {
   constructor(
@@ -301,8 +301,24 @@ export class AuthService {
         await this.usersService.update(user.userId, { phone });
       }
 
-      // MOCK SMS SENDING
-      this.logger.info(`📲 [MOCK SMS] Sending OTP ${code} to phone ${phone}`);
+        // SEND OTP VIA VONAGE
+        const vonage = new Vonage({
+          apiKey: this.configService.get<string>('VONAGE_API_KEY')!,
+          apiSecret: this.configService.get<string>('VONAGE_API_SECRET')!,
+        });
+        try {
+          const formattedPhone = phone.startsWith('+') ? phone : `+20${phone.replace(/^0/, '')}`;
+          const response = await vonage.sms.send({
+            to: formattedPhone,
+            from: this.configService.get<string>('VONAGE_FROM_NUMBER')!,
+            text: `رمز التحقق هو ${code} - Jobito`,
+          });
+          this.logger.info(`✅ OTP SMS sent to ${phone}`);
+          this.logger.debug(`Vonage response: ${JSON.stringify(response)}`);
+        } catch (err) {
+          this.logger.warn(`⚠️ Failed to send OTP via Vonage: ${err}`);
+          this.logger.info(`📲 [MOCK SMS] OTP ${code} → ${phone}`);
+        }
       
       return { message: 'Verification code sent to your phone' };
     }
