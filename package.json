@@ -13,7 +13,7 @@
     "prestart:dev": "npx kill-port 3000 || true",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "npm run build && node dist/main",
     "start:companies": "nest start --watch companies",
     "start:jobs": "nest start --watch jobs",
     "start:auth": "nest start --watch auth",
@@ -65,13 +65,16 @@
     "stream-to-promise": "^3.0.0",
     "typeorm": "^0.3.28",
     "web-push": "^3.6.7",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "@nestjs/cli": "^11.0.21",
+    "@nestjs/schematics": "^11.1.0",
+    "typescript": "^5.9.3",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@nestjs/cli": "^11.0.21",
-    "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.0.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.0",
@@ -92,9 +95,6 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.3",
     "typescript-eslint": "^8.20.0"
   },
   "jest": {
