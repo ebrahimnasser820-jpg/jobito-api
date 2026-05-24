@@ -15,7 +15,6 @@ export class TranslationEngineService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Redis has been removed; no initialization needed.
   }
 
   /**

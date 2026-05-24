@@ -18,16 +18,7 @@ async function bootstrap() {
     logger: WinstonModule.createLogger(winstonConfig),
   });
 
-  // Connect to Redis Microservice (Disabled for Monolithic testing)
-  /*
-  app.connectMicroservice({
-    transport: Transport.REDIS,
-    options: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-    },
-  });
-  */
+
 
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 

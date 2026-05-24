@@ -307,7 +307,6 @@ export class JobsService {
   }
 
   private async invalidateCache() {
-    // Redis logic removed
   }
 
   async findOne(id: number) {
