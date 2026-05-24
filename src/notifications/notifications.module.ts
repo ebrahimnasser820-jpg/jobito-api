@@ -13,20 +13,9 @@ import { PushSubscription } from './entities/push-subscription.entity.js';
   imports: [
     MailModule,
     TypeOrmModule.forFeature([Notification, PushSubscription]),
-    // Enable this module to behave as a microservice client too
-    ClientsModule.register([
-      {
-        name: 'NOTIFICATIONS_SERVICE',
-        transport: Transport.REDIS,
-        options: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: Number(process.env.REDIS_PORT) || 6379,
-        },
-      },
-    ]),
   ],
   controllers: [PushController],
   providers: [NotificationsService, PushService],
-  exports: [NotificationsService, PushService, ClientsModule],
+  exports: [NotificationsService, PushService],
 })
 export class NotificationsModule {}
