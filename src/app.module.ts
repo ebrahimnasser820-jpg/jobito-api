@@ -10,7 +10,6 @@ import { AppService } from './app.service.js';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './database/typeorm.config.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
-import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
 import { winstonConfig } from './common/configs/logger.config.js';
 
 // Feature Modules
@@ -32,7 +31,6 @@ import { FavoritesModule } from './favorites/favorites.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
 import { AiChatbotModule } from './ai-chatbot/ai-chatbot.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
-import { TranslationsModule } from './translations/translations.module.js';
 import { RatingsModule } from './ratings/ratings.module.js';
 import { AdminModule } from './admin/admin.module.js';
 @Module({
@@ -78,7 +76,6 @@ import { AdminModule } from './admin/admin.module.js';
     DashboardModule,
     AiChatbotModule,
     MonitoringModule,
-    TranslationsModule,
     RatingsModule,
     AdminModule,
   ],
@@ -88,10 +85,6 @@ import { AdminModule } from './admin/admin.module.js';
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: AutoTranslationInterceptor,
     },
   ],
 })
