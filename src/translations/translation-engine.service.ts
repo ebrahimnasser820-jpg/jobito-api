@@ -2,14 +2,12 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
-import Redis from 'ioredis';
 import { Translation } from './entities/translation.entity.js';
 
 @Injectable()
 export class TranslationEngineService implements OnModuleInit {
   private readonly baseUrl = process.env.TRANSLATION_SERVICE_URL || 'https://translate-production-8b5c.up.railway.app';
   private readonly chunkSize = 20;
-  private redis: Redis;
 
   constructor(
     @InjectRepository(Translation)
@@ -17,57 +15,23 @@ export class TranslationEngineService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    const host = process.env.REDIS_HOST || 'localhost';
-    const portStr = process.env.REDIS_PORT || '6379';
-    const port = parseInt(portStr, 10) || 6379;
-
-    // Initialize Redis connection
-    this.redis = new Redis({ host, port });
-    
-    this.redis.on('error', (err) => {
-      console.warn('[Redis Error]: Translation cache may not be available.', err.message);
-    });
+    // Redis has been removed; no initialization needed.
   }
 
   /**
-   * Translates a batch of texts using 3-layer caching: Redis -> Postgres -> Python Service
+   * Translates a batch of texts using 2-layer caching: Postgres -> Python Service
    */
   async translateBatch(texts: string[], targetLang: 'ar' | 'en'): Promise<string[]> {
     if (!texts || texts.length === 0) return [];
 
     const results: string[] = new Array(texts.length);
-    const missingIndices: number[] = [];
+
+    // 1. Layer 1: Postgres Lookup (Persistent Cache)
     const missingTexts: string[] = [];
-
-    // 1. Layer 1: Redis Lookup (Fastest)
-    try {
-      if (this.redis) {
-        const redisKeys = texts.map(t => `tr:${targetLang}:${t}`);
-        const cached = await this.redis.mget(...redisKeys);
-        
-        if (cached) {
-          cached.forEach((val, i) => {
-            if (val) {
-              results[i] = val;
-            } else {
-              missingIndices.push(i);
-              missingTexts.push(texts[i]);
-            }
-          });
-        }
-      }
-    } catch (err) {
-      console.warn('[Redis Lookup Error]:', err.message);
-    }
-
-    if (missingTexts.length === 0) return results;
-
-    // 2. Layer 2: Postgres Lookup (Persistent Cache)
-    const stillMissingTexts: string[] = [];
-    const stillMissingIndices: number[] = [];
+    const missingIndices: number[] = [];
 
     try {
-      for (const [i, text] of missingTexts.entries()) {
+      for (const [i, text] of texts.entries()) {
         const dbRecord = await this.translationsRepository.findOne({
           where: [
             { en: text },
@@ -78,26 +42,27 @@ export class TranslationEngineService implements OnModuleInit {
 
         if (dbRecord) {
           const translated = targetLang === 'ar' ? dbRecord.ar : dbRecord.en;
-          const origIdx = missingIndices[i];
-          results[origIdx] = translated;
-          
-          // Populate Redis for next time
-          if (this.redis) {
-            await this.redis.setex(`tr:${targetLang}:${text}`, 86400 * 7, translated);
-          }
+          results[i] = translated;
         } else {
-          stillMissingTexts.push(text);
-          stillMissingIndices.push(missingIndices[i]);
+          missingTexts.push(text);
+          missingIndices.push(i);
         }
       }
     } catch (err) {
       console.warn('[Postgres Lookup Error]:', err.message);
+      // In case of error, assume all remaining are missing to try with Microservice
+      for (let i = 0; i < texts.length; i++) {
+        if (!results[i]) {
+          missingTexts.push(texts[i]);
+          missingIndices.push(i);
+        }
+      }
     }
 
-    if (stillMissingTexts.length === 0) return results;
+    if (missingTexts.length === 0) return results;
 
-    // 3. Layer 3: Python Microservice (Source)
-    const chunks = this.createChunks(stillMissingTexts, this.chunkSize);
+    // 2. Layer 2: Python Microservice (Source)
+    const chunks = this.createChunks(missingTexts, this.chunkSize);
     
     try {
       const chunkResults: string[][] = [];
@@ -109,26 +74,28 @@ export class TranslationEngineService implements OnModuleInit {
       }
       const flattenedResults = chunkResults.flat();
 
-      // Synchronize results to Postgres and Redis
+      // Synchronize results to Postgres
       for (let i = 0; i < flattenedResults.length; i++) {
         const translated = flattenedResults[i];
-        const original = stillMissingTexts[i];
-        const origIdx = stillMissingIndices[i];
+        const original = missingTexts[i];
+        const origIdx = missingIndices[i];
         results[origIdx] = translated;
 
         // Save to Postgres asynchronously
         this.saveToPostgres(original, translated, targetLang).catch(() => {});
-
-        // Save to Redis
-        if (this.redis) {
-          this.redis.setex(`tr:${targetLang}:${original}`, 86400 * 7, translated).catch(() => {});
-        }
       }
 
       return results;
     } catch (err) {
       console.error('[Translation Engine Error]:', err.message);
-      return texts;
+      // Fallback: return originals for anything that failed
+      for (let i = 0; i < missingTexts.length; i++) {
+        const origIdx = missingIndices[i];
+        if (!results[origIdx]) {
+          results[origIdx] = missingTexts[i];
+        }
+      }
+      return results;
     }
   }
 
