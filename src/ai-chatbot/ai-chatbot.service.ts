@@ -79,7 +79,7 @@ export class AiChatbotService {
 
     } catch (error) {
       if (error.response) {
-        this.logger.error(`AI Service Error (${error.response.status}): ${JSON.stringify(error.response.data)}`);
+        this.logger.error(`AI Service Error (${error.response.status}): ${error.message}`);
       } else {
         this.logger.error(`AI Service Error: ${error.message}`);
       }

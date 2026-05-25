@@ -81,7 +81,7 @@ export class MailService {
             <h1 style="color: #111827; font-size: 24px; font-weight: 800; margin: 0;">Welcome to Jobito! 🎉</h1>
           </div>
           <p style="color: #4b5563; font-size: 16px; line-height: 24px; text-align: center; margin-bottom: 32px;">
-            Thank you for joining our community. To get started, please verify your email address by clicking the button below <b>OR</b> by using the verification code:
+            Thank you for joining our community. To get started, please verify your email address by using the verification code below:
           </p>
 
           <div style="background: #f3f4f6; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 32px;">
@@ -89,20 +89,9 @@ export class MailService {
             <span style="font-size: 32px; font-weight: bold; letter-spacing: 12px; color: #2563eb; display: block; padding: 10px 0;">${code}</span>
           </div>
 
-          <div style="text-align: center; margin-bottom: 32px;">
-            <a href="${link}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; transition: background-color 0.2s;">
-              Verify Email Address
-            </a>
-          </div>
-          <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 0;">
-            If the button doesn't work, copy and paste this link into your browser:
-          </p>
-          <p style="color: #2563eb; font-size: 12px; text-align: center; word-break: break-all; margin-top: 8px;">
-            ${link}
-          </p>
           <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
           <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            This link and code will expire in 10 minutes. If you didn't create an account, you can safely ignore this email.
+            This code will expire in 10 minutes. If you didn't create an account, you can safely ignore this email.
           </p>
         </div>
       `,
