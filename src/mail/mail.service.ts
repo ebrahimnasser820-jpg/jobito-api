@@ -1,48 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter | null = null;
   private readonly logger = new Logger(MailService.name);
-  private readonly useResend: boolean;
   private readonly resendApiKey: string;
   private readonly fromEmail: string;
 
   constructor() {
-    this.resendApiKey = process.env.RESEND_API_KEY || '';
-    this.useResend = !!this.resendApiKey;
+    this.resendApiKey = process.env.RESEND_API_KEY || 're_Ur5QKkZX_HotPwAPejFNFYcMCHVpmCbgs';
     this.fromEmail = process.env.MAIL_USER || 'noreply@jobito.com';
-
-    if (this.useResend) {
-      this.logger.log('📧 Mail transport: Resend HTTP API (cloud-safe)');
-    } else {
-      this.logger.log('📧 Mail transport: Nodemailer SMTP (local/verified)');
-      const port = Number(process.env.MAIL_PORT) || 587;
-      this.transporter = nodemailer.createTransport({
-        host: process.env.MAIL_HOST || 'smtp.gmail.com',
-        port: port,
-        secure: port === 465,
-        auth: {
-          user: process.env.MAIL_USER,
-          pass: process.env.MAIL_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false, // Prevent SSL/TLS handshake errors on cloud platforms
-        },
-      });
-    }
+    this.logger.log('📧 Mail transport: Resend HTTP API (exclusive/cloud-safe)');
   }
 
   /**
-   * Core send method — routes to Resend HTTP API or Nodemailer SMTP
+   * Core send method — routes directly to Resend HTTP API
    */
   private async send(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
-    if (this.useResend) {
-      await this.sendViaResend(options);
-    } else {
-      await this.transporter!.sendMail(options);
-    }
+    await this.sendViaResend(options);
   }
 
   /**
