@@ -9,6 +9,7 @@ import {
   JoinColumn,
   JoinTable,
   OneToMany,
+  Relation,
 } from 'typeorm';
 import { Company } from '../companies/company.entity.js';
 import { User } from '../users/user.entity.js';
@@ -33,14 +34,14 @@ export class Job {
 
   @ManyToOne(() => Company, (company) => company.jobs, { nullable: true })
   @JoinColumn({ name: 'company_id' })
-  company: Company;
+  company: Relation<Company>;
 
   @Column({ name: 'company_id', type: 'bigint', nullable: true })
   companyId: number | null;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: Relation<User>;
 
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId: string | null;

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Relation,
 } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import { Job } from '../jobs/job.entity.js';
@@ -19,14 +20,14 @@ export class Application {
 
   @ManyToOne(() => Job, (job) => job.applications)
   @JoinColumn({ name: 'job_id' })
-  job: Job;
+  job: Relation<Job>;
 
   @Column({ name: 'job_id', type: 'bigint' })
   jobId: number;
 
   @ManyToOne(() => User, (user) => user.applications)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: Relation<User>;
 
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
