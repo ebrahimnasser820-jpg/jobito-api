@@ -9,8 +9,8 @@ import {
   JoinColumn,
   JoinTable,
   OneToMany,
-  Relation,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { Company } from '../companies/company.entity.js';
 import { User } from '../users/user.entity.js';
 import { Category } from './category.entity.js';

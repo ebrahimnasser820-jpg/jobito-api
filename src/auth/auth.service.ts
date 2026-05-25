@@ -289,56 +289,6 @@ export class AuthService {
     throw new NotFoundException('User not found. Please register.');
   }
 
-  // ─── Phone OTP ────────────────────────────────────────────────
-
-  async sendPhoneOtp(email: string, phone: string) {
-    const user = await this.usersService.findByEmail(email);
-    
-    if (user) {
-      if (user.isActive) return { message: 'Account already verified' };
-      
-      const code = this.generateCode();
-      await this.saveOtp(user.userId, code);
-      
-      // Update phone number if it was changed
-      if (user.phone !== phone) {
-        await this.usersService.update(user.userId, { phone });
-      }
-
-        // SEND OTP VIA VONAGE
-        const vonage = new Vonage({
-          apiKey: this.configService.get<string>('VONAGE_API_KEY')!,
-          apiSecret: this.configService.get<string>('VONAGE_API_SECRET')!,
-        });
-        try {
-          const formattedPhone = phone.startsWith('+') ? phone : `+20${phone.replace(/^0/, '')}`;
-          const response = await vonage.sms.send({
-            to: formattedPhone,
-            from: this.configService.get<string>('VONAGE_FROM_NUMBER')!,
-            text: `رمز التحقق هو ${code} - Jobito`,
-          });
-          this.logger.info(`✅ OTP SMS sent to ${phone}`);
-          this.logger.debug(`Vonage response: ${JSON.stringify(response)}`);
-        } catch (err) {
-          this.logger.warn(`⚠️ Failed to send OTP via Vonage: ${err}`);
-          this.logger.info(`📲 [MOCK SMS] OTP ${code} → ${phone}`);
-        }
-      
-      return { message: 'Verification code sent to your phone' };
-    }
-
-    throw new NotFoundException('User not found. Please register.');
-  }
-
-  async verifyPhoneOtp(email: string, phone: string, code: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (user && user.phone !== phone) {
-      // Update phone number if it was corrected during verification
-      await this.usersService.update(user.userId, { phone });
-    }
-    // The activation logic is identical to email verification
-    return this.verifyEmail(email, code);
-  }
 
   // ─── Firebase Phone Auth ───────────────────────────────────────
   async verifyFirebasePhoneToken(email: string, firebaseToken: string) {

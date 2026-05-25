@@ -5,8 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
-  Relation,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { HelpCategory } from './help-category.entity.js';
 
 @Entity({ schema: 'ptj', name: 'help_articles' })

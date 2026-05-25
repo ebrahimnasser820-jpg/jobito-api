@@ -6,8 +6,8 @@ import {
   UpdateDateColumn,
   OneToOne,
   JoinColumn,
-  Relation,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { User } from './user.entity.js';
 
 @Entity({ schema: 'ptj', name: 'applicant_profiles' })

@@ -102,16 +102,6 @@ export class AuthController {
     return res.redirect(redirectUrl);
   }
 
-  @Post('send-phone-otp')
-  sendPhoneOtp(@Body() body: { email: string, phone: string }) {
-    return this.authService.sendPhoneOtp(body.email, body.phone);
-  }
-
-  @Post('verify-phone-otp')
-  verifyPhoneOtp(@Body() body: { email: string, phone: string, code: string }) {
-    return this.authService.verifyPhoneOtp(body.email, body.phone, body.code);
-  }
-
   @Post('verify-firebase-phone')
   verifyFirebasePhone(@Body() body: { email: string, firebaseToken: string }) {
     return this.authService.verifyFirebasePhoneToken(body.email, body.firebaseToken);

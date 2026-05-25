@@ -7,8 +7,8 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
-  Relation,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import { Job } from '../jobs/job.entity.js';
 
