@@ -33,6 +33,8 @@ import { AiChatbotModule } from './ai-chatbot/ai-chatbot.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
 import { RatingsModule } from './ratings/ratings.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { TranslationsModule } from './translations/translations.module.js';
+import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -78,6 +80,7 @@ import { AdminModule } from './admin/admin.module.js';
     MonitoringModule,
     RatingsModule,
     AdminModule,
+    TranslationsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -85,6 +88,10 @@ import { AdminModule } from './admin/admin.module.js';
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AutoTranslationInterceptor,
     },
   ],
 })
