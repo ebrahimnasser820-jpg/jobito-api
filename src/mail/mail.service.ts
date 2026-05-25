@@ -6,13 +6,17 @@ export class MailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
+    const port = Number(process.env.MAIL_PORT) || 587;
     this.transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST || 'smtp.gmail.com',
-      port: Number(process.env.MAIL_PORT) || 587,
-      secure: false,
+      port: port,
+      secure: port === 465,
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false, // Prevent SSL/TLS handshake errors on cloud platforms
       },
     });
   }
