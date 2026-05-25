@@ -172,7 +172,9 @@ export class AuthService {
 
     this.logger.info(`Starting registration for: ${data.email} with role: ${role}. Data staged in user bio.`);
     
-    await this.notificationsService.handleUserRegistered({ email: cleanEmail, code });
+    this.notificationsService.handleUserRegistered({ email: cleanEmail, code }).catch(err => {
+      this.logger.error(`[AuthService] Background mail trigger failed: ${err.message}`);
+    });
     
     return { message: 'Registration pending. Please check your email for the verification code to complete your setup.' };
   }
@@ -277,7 +279,9 @@ export class AuthService {
       
       const code = this.generateCode();
       await this.saveOtp(user.userId, code);
-      await this.notificationsService.handleUserRegistered({ email, code });
+      this.notificationsService.handleUserRegistered({ email, code }).catch(err => {
+        this.logger.error(`[AuthService] Background resend mail trigger failed: ${err.message}`);
+      });
 
       return { message: 'Verification code sent to your email' };
     }
