@@ -1,30 +1,87 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private readonly logger = new Logger(MailService.name);
+  private readonly useResend: boolean;
+  private readonly resendApiKey: string;
+  private readonly fromEmail: string;
 
   constructor() {
-    const port = Number(process.env.MAIL_PORT) || 587;
-    this.transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST || 'smtp.gmail.com',
-      port: port,
-      secure: port === 465,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+    this.resendApiKey = process.env.RESEND_API_KEY || '';
+    this.useResend = !!this.resendApiKey;
+    this.fromEmail = process.env.MAIL_USER || 'noreply@jobito.com';
+
+    if (this.useResend) {
+      this.logger.log('📧 Mail transport: Resend HTTP API (cloud-safe)');
+    } else {
+      this.logger.log('📧 Mail transport: Nodemailer SMTP (local/verified)');
+      const port = Number(process.env.MAIL_PORT) || 587;
+      this.transporter = nodemailer.createTransport({
+        host: process.env.MAIL_HOST || 'smtp.gmail.com',
+        port: port,
+        secure: port === 465,
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false, // Prevent SSL/TLS handshake errors on cloud platforms
+        },
+      });
+    }
+  }
+
+  /**
+   * Core send method — routes to Resend HTTP API or Nodemailer SMTP
+   */
+  private async send(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
+    if (this.useResend) {
+      await this.sendViaResend(options);
+    } else {
+      await this.transporter!.sendMail(options);
+    }
+  }
+
+  /**
+   * Send email via Resend HTTP API (uses port 443 — never blocked by cloud hosts)
+   */
+  private async sendViaResend(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
+    const resendFrom = process.env.RESEND_FROM_EMAIL || 'Jobito <onboarding@resend.dev>';
+
+    const body: any = {
+      from: resendFrom,
+      to: [options.to],
+      subject: options.subject,
+    };
+    if (options.html) body.html = options.html;
+    if (options.text) body.text = options.text;
+    if (options.replyTo) body.reply_to = options.replyTo;
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.resendApiKey}`,
+        'Content-Type': 'application/json',
       },
-      tls: {
-        rejectUnauthorized: false, // Prevent SSL/TLS handshake errors on cloud platforms
-      },
+      body: JSON.stringify(body),
     });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Resend API error (${response.status}): ${errorData}`);
+    }
+
+    const result = await response.json();
+    this.logger.log(`✅ Email sent via Resend to ${options.to} — ID: ${(result as any).id}`);
   }
 
   /** Send email verification link and code */
   async sendVerificationEmail(to: string, link: string, code: string): Promise<void> {
-    await this.transporter.sendMail({
-      from: `"Jobito" <${process.env.MAIL_USER}>`,
+    await this.send({
+      from: `"Jobito" <${this.fromEmail}>`,
       to,
       subject: 'Jobito — Verify Your Email',
       html: `
@@ -63,8 +120,8 @@ export class MailService {
 
   /** Send password reset code */
   async sendPasswordResetCode(to: string, code: string): Promise<void> {
-    await this.transporter.sendMail({
-      from: `"Jobito" <${process.env.MAIL_USER}>`,
+    await this.send({
+      from: `"Jobito" <${this.fromEmail}>`,
       to,
       subject: 'Jobito — Reset Your Password',
       html: `
@@ -82,9 +139,9 @@ export class MailService {
 
   /** Send support contact email */
   async sendSupportEmail(data: any): Promise<void> {
-    await this.transporter.sendMail({
-      from: `"Jobito Support" <${process.env.MAIL_USER}>`,
-      to: process.env.MAIL_USER,
+    await this.send({
+      from: `"Jobito Support" <${this.fromEmail}>`,
+      to: process.env.MAIL_USER || this.fromEmail,
       replyTo: data.email,
       subject: `Contact Request: ${data.subject}`,
       html: `
@@ -109,8 +166,8 @@ export class MailService {
 
   /** Send system alerts (AI Monitoring) */
   async sendSystemAlert(to: string, subject: string, html: string): Promise<void> {
-    await this.transporter.sendMail({
-      from: `"Jobito AI Monitor" <${process.env.MAIL_USER}>`,
+    await this.send({
+      from: `"Jobito AI Monitor" <${this.fromEmail}>`,
       to,
       subject: `[ALERT] ${subject}`,
       html,
@@ -119,8 +176,8 @@ export class MailService {
 
   /** Send generic mail (plain text) */
   async sendMail(to: string, subject: string, text: string): Promise<void> {
-    await this.transporter.sendMail({
-      from: `"Jobito" <${process.env.MAIL_USER}>`,
+    await this.send({
+      from: `"Jobito" <${this.fromEmail}>`,
       to,
       subject,
       text,
@@ -156,8 +213,8 @@ export class MailService {
       actionDesc = 'Your account has been permanently banned due to severe or repeated violations of our terms of service.';
     }
 
-    await this.transporter.sendMail({
-      from: `"Jobito Safety" <${process.env.MAIL_USER}>`,
+    await this.send({
+      from: `"Jobito Safety" <${this.fromEmail}>`,
       to,
       subject: `Jobito — ${title}`,
       html: `
@@ -210,8 +267,8 @@ export class MailService {
         : 'Unfortunately, your criminal record document was rejected. Your worker account access has been restricted. Please upload a valid document or contact support.';
     }
 
-    await this.transporter.sendMail({
-      from: `"Jobito Operations" <${process.env.MAIL_USER}>`,
+    await this.send({
+      from: `"Jobito Operations" <${this.fromEmail}>`,
       to,
       subject: `Jobito — ${title}`,
       html: `
@@ -246,4 +303,3 @@ export class MailService {
     });
   }
 }
-
