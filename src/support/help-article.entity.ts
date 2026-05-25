@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  Relation,
 } from 'typeorm';
 import { HelpCategory } from './help-category.entity.js';
 
@@ -15,7 +16,7 @@ export class HelpArticle {
 
   @ManyToOne(() => HelpCategory, (category) => category.articles)
   @JoinColumn({ name: 'category_id' })
-  category: HelpCategory;
+  category: Relation<HelpCategory>;
 
   @Column({ name: 'category_id', type: 'bigint' })
   categoryId: number;
