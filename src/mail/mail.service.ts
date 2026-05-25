@@ -3,53 +3,70 @@ import { Injectable, Logger } from '@nestjs/common';
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly resendApiKey: string;
+  private readonly brevoApiKey: string;
   private readonly fromEmail: string;
+  private readonly senderName: string;
 
   constructor() {
-    this.resendApiKey = process.env.RESEND_API_KEY || 're_Ur5QKkZX_HotPwAPejFNFYcMCHVpmCbgs';
-    this.fromEmail = process.env.MAIL_USER || 'noreply@jobito.com';
-    this.logger.log('📧 Mail transport: Resend HTTP API (exclusive/cloud-safe)');
+    this.brevoApiKey = process.env.BREVO_API_KEY || '';
+    this.fromEmail = process.env.BREVO_SENDER_EMAIL || 'mohamednasseremam380@gmail.com';
+    this.senderName = process.env.BREVO_SENDER_NAME || 'Jobito';
+    this.logger.log('📧 Mail transport: Brevo HTTP API (exclusive/cloud-safe)');
   }
 
   /**
-   * Core send method — routes directly to Resend HTTP API
+   * Core send method — routes directly to Brevo HTTP API
    */
   private async send(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
-    await this.sendViaResend(options);
+    await this.sendViaBrevo(options);
   }
 
   /**
-   * Send email via Resend HTTP API (uses port 443 — never blocked by cloud hosts)
+   * Send email via Brevo HTTP API (uses port 443 — never blocked by cloud hosts)
    */
-  private async sendViaResend(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
-    const resendFrom = process.env.RESEND_FROM_EMAIL || 'Jobito <onboarding@resend.dev>';
-
+  private async sendViaBrevo(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
     const body: any = {
-      from: resendFrom,
-      to: [options.to],
+      sender: {
+        name: this.senderName,
+        email: this.fromEmail,
+      },
+      to: [
+        {
+          email: options.to,
+        }
+      ],
       subject: options.subject,
     };
-    if (options.html) body.html = options.html;
-    if (options.text) body.text = options.text;
-    if (options.replyTo) body.reply_to = options.replyTo;
 
-    const response = await fetch('https://api.resend.com/emails', {
+    if (options.html) {
+      body.htmlContent = options.html;
+    }
+    if (options.text) {
+      body.textContent = options.text;
+    }
+    if (options.replyTo) {
+      body.replyTo = {
+        email: options.replyTo,
+      };
+    }
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${this.resendApiKey}`,
+        'api-key': this.brevoApiKey,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`Resend API error (${response.status}): ${errorData}`);
+      throw new Error(`Brevo API error (${response.status}): ${errorData}`);
     }
 
     const result = await response.json();
-    this.logger.log(`✅ Email sent via Resend to ${options.to} — ID: ${(result as any).id}`);
+    this.logger.log(`✅ Email sent via Brevo to ${options.to} — MessageID: ${(result as any).messageId}`);
   }
 
   /** Send email verification link and code */
