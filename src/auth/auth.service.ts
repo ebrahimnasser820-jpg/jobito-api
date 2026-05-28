@@ -178,6 +178,19 @@ export class AuthService {
     this.notificationsService.handleUserRegistered({ email: cleanEmail, code }).catch(err => {
       this.logger.error(`[AuthService] Background mail trigger failed: ${err.message}`);
     });
+
+    // Log new registration as a System event
+    try {
+      await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
+        actionType: 'USER_REGISTERED',
+        targetEntity: 'System',
+        targetId: user.userId,
+        description: `New ${role} registered: ${cleanEmail}`,
+        metadata: { email: cleanEmail, role },
+      }));
+    } catch (logErr) {
+      this.logger.warn(`Failed to log registration: ${logErr.message}`);
+    }
     
     return { message: 'Registration pending. Please check your email for the verification code to complete your setup.' };
   }
@@ -402,6 +415,18 @@ export class AuthService {
           entityId: admin.adminId,
           metadata: { email: data.email }
         }));
+        // Also log failed admin login to AdminActivityLog for Operations Monitor
+        try {
+          await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
+            actionType: 'FAILED_LOGIN',
+            targetEntity: 'System',
+            targetId: admin.adminId,
+            description: `Failed admin login attempt for ${data.email}`,
+            metadata: { email: data.email, reason: 'invalid_password' },
+          }));
+        } catch (logErr) {
+          this.logger.warn(`Failed to log failed admin login: ${logErr.message}`);
+        }
         throw new UnauthorizedException('Invalid credentials');
       }
 
@@ -457,6 +482,18 @@ export class AuthService {
           entityId: user.userId,
           metadata: { email: data.email }
         }));
+        // Also log failed user login to AdminActivityLog for Operations Monitor
+        try {
+          await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
+            actionType: 'FAILED_LOGIN',
+            targetEntity: 'System',
+            targetId: user.userId,
+            description: `Failed login attempt for user ${data.email}`,
+            metadata: { email: data.email, reason: 'invalid_password' },
+          }));
+        } catch (logErr) {
+          this.logger.warn(`Failed to log failed user login: ${logErr.message}`);
+        }
         throw new UnauthorizedException('Invalid credentials');
       }
 
@@ -583,6 +620,19 @@ export class AuthService {
 
     const hash = await bcrypt.hash(newPassword, 10);
     await this.usersService.update(user.userId, { passwordHash: hash });
+
+    // Log password reset as a System event
+    try {
+      await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
+        actionType: 'PASSWORD_RESET',
+        targetEntity: 'System',
+        targetId: user.userId,
+        description: `Password reset completed for ${email}`,
+        metadata: { email, method: 'email_otp' },
+      }));
+    } catch (logErr) {
+      this.logger.warn(`Failed to log password reset: ${logErr.message}`);
+    }
 
     return {
       message: 'Password reset successfully. You can now log in with your new password.',
@@ -713,6 +763,19 @@ export class AuthService {
         services: user.services || [],
         criminalRecordUrl: user.criminalRecordUrl || null,
       };
+
+      // Log Google login as a System event
+      try {
+        await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
+          actionType: 'GOOGLE_LOGIN',
+          targetEntity: 'System',
+          targetId: user.userId,
+          description: `Google login: ${user.fullName} (${user.email})`,
+          metadata: { email: user.email, role: user.role, method: 'google' },
+        }));
+      } catch (logErr) {
+        this.logger.warn(`Failed to log Google login: ${logErr.message}`);
+      }
 
       return {
         access_token: this.jwtService.sign(jwtPayload),

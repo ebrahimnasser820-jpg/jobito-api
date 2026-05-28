@@ -133,8 +133,23 @@ export class AdminDashboardService {
     return { maintenanceMode: AdminDashboardService.maintenanceMode };
   }
 
-  setMaintenanceMode(enabled: boolean) {
+  async setMaintenanceMode(enabled: boolean, adminId?: string) {
     AdminDashboardService.maintenanceMode = enabled;
+
+    // Log maintenance toggle as a System event
+    try {
+      await this.activityLogRepo.save(this.activityLogRepo.create({
+        adminId: adminId || null,
+        actionType: enabled ? 'MAINTENANCE_ENABLED' : 'MAINTENANCE_DISABLED',
+        targetEntity: 'System',
+        targetId: null,
+        description: enabled ? 'Maintenance mode enabled — external user access disabled' : 'Maintenance mode disabled — system back online',
+        metadata: { enabled },
+      }));
+    } catch (err) {
+      console.error('Failed to log maintenance toggle:', err.message);
+    }
+
     return { maintenanceMode: AdminDashboardService.maintenanceMode, message: enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled' };
   }
 

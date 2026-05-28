@@ -59,8 +59,8 @@ export class AdminAuthController {
   @Patch('maintenance')
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
   @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
-  async toggleMaintenance(@Body('enabled') enabled: boolean) {
-    return this.dashboardService.setMaintenanceMode(enabled);
+  async toggleMaintenance(@CurrentUser() admin: any, @Body('enabled') enabled: boolean) {
+    return this.dashboardService.setMaintenanceMode(enabled, admin.adminId);
   }
 
   // ─── Super Admin: Admin Management ────────────────────────────
