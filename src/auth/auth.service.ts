@@ -464,6 +464,16 @@ export class AuthService {
         }
       }
 
+      // Block tradesmen whose criminal record is pending or rejected
+      if (user.role === 'student' && user.classification === 'tradesman') {
+        if (user.accountStatus === 'pending') {
+          throw new UnauthorizedException('حسابك قيد المراجعة حالياً بانتظار موافقة المسؤول على الفيش الجنائي. الرجاء المحاولة لاحقاً بعد تفعيل الحساب.');
+        }
+        if (user.accountStatus === 'cr_rejected') {
+          throw new UnauthorizedException('تم رفض الفيش الجنائي الخاص بك من قِبل الإدارة. يرجى التواصل مع الدعم الفني لمزيد من التفاصيل.');
+        }
+      }
+
       // ─── Ensure MongoDB profile exists ───────────────────────
       this.mongoUserProfileService.ensureUserProfile({
         userId: user.userId,
@@ -617,6 +627,16 @@ export class AuthService {
           user.isActive = true;
           user.suspendedUntil = null;
           await this.usersService.update(user.userId, { accountStatus: 'active', isActive: true, suspendedUntil: null });
+        }
+      }
+
+      // Block tradesmen whose criminal record is pending or rejected
+      if (user.role === 'student' && user.classification === 'tradesman') {
+        if (user.accountStatus === 'pending') {
+          throw new UnauthorizedException('حسابك قيد المراجعة حالياً بانتظار موافقة المسؤول على الفيش الجنائي. الرجاء المحاولة لاحقاً بعد تفعيل الحساب.');
+        }
+        if (user.accountStatus === 'cr_rejected') {
+          throw new UnauthorizedException('تم رفض الفيش الجنائي الخاص بك من قِبل الإدارة. يرجى التواصل مع الدعم الفني لمزيد من التفاصيل.');
         }
       }
 
