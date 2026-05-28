@@ -69,7 +69,7 @@ export class AdminAuthController {
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
   @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
   async inviteAdmin(@CurrentUser() admin: any, @Body() dto: InviteAdminDto) {
-    return this.authService.inviteAdmin(admin.adminId, dto.fullName, dto.email, dto.role, dto.password);
+    return this.authService.inviteAdmin(admin.adminId, dto.fullName, dto.email, AdminRole.OPERATION_MANAGER, dto.password);
   }
 
   @Get('list')

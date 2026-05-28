@@ -11,8 +11,8 @@ export class InviteAdminDto {
   email: string;
 
   @IsEnum(AdminRole)
-  @IsNotEmpty()
-  role: AdminRole;
+  @IsOptional()
+  role?: AdminRole;
 
   @IsString()
   @IsOptional()
