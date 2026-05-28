@@ -165,34 +165,31 @@ export class AdminDashboardService {
     const now = new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    // Hourly breakdown of this ops manager's actions in last 24h
+    // Hourly breakdown of all actions in last 24h for Operations Monitor
     const hourlyActivity = await this.dataSource.query(
       `SELECT 
          DATE_TRUNC('hour', created_at) as hour,
          COUNT(*) as count
        FROM ptj.admin_activity_logs
-       WHERE admin_id = $1
-         AND created_at >= $2
+       WHERE created_at >= $1
        GROUP BY DATE_TRUNC('hour', created_at)
        ORDER BY hour ASC`,
-      [adminId, last24h],
+      [last24h],
     );
 
     // Total actions today
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const todayCount = await this.activityLogRepo.count({
-      where: { adminId } as any,
-    });
+    const todayCount = await this.activityLogRepo.count();
 
     // Actions in last 24h specifically
     const last24hActions = await this.dataSource.query(
       `SELECT action_type, COUNT(*) as count
        FROM ptj.admin_activity_logs
-       WHERE admin_id = $1 AND created_at >= $2
+       WHERE created_at >= $1
        GROUP BY action_type
        ORDER BY count DESC`,
-      [adminId, last24h],
+      [last24h],
     );
 
     return {
