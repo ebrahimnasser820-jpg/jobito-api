@@ -1,115 +1,214 @@
-# مسارات API لمنصة Jobito
-الرابط الأساسي: `https://jobito-api-production.up.railway.app`
+# 📄 توثيق واجهات برمجة التطبيقات النشطة والفعّالة (Backend API Endpoints)
 
-### 🔐 Auth & Users (المصادقة والمستخدمين)
-- `POST https://jobito-api-production.up.railway.app/auth/register`
-- `POST https://jobito-api-production.up.railway.app/auth/login`
-- `POST https://jobito-api-production.up.railway.app/auth/verify-login`
-- `POST https://jobito-api-production.up.railway.app/auth/send-phone-otp`
-- `POST https://jobito-api-production.up.railway.app/auth/verify-phone`
-- `POST https://jobito-api-production.up.railway.app/auth/register-company`
-- `POST https://jobito-api-production.up.railway.app/auth/forgot-password`
-- `POST https://jobito-api-production.up.railway.app/auth/reset-password`
-- `GET https://jobito-api-production.up.railway.app/users`
-- `GET https://jobito-api-production.up.railway.app/users/me`
-- `PUT https://jobito-api-production.up.railway.app/users/me`
-- `PATCH https://jobito-api-production.up.railway.app/users/me/theme`
-- `PATCH https://jobito-api-production.up.railway.app/users/me/language`
-- `PUT https://jobito-api-production.up.railway.app/users/me/password`
-- `DELETE https://jobito-api-production.up.railway.app/users/me`
-- `PATCH https://jobito-api-production.up.railway.app/users/me/cancel-deletion`
-- `GET https://jobito-api-production.up.railway.app/users/me/deletion-status`
+يحتوي هذا الدليل على **جميع مسارات واجهات برمجة التطبيقات (API Endpoints) النشطة والفعّالة فعلياً** في خادم النظام الخلفي (Backend) لمنصة **Jobito**. تم توثيق جميع المسارات مصنفة حسب الوحدات البرمجية والوظائف، وهي مهيأة بالكامل وجاهزة للنقل المباشر لتقرير/كتاب مشروع التخرج الخاص بك.
 
-### 💼 Jobs (الوظائف)
-- `POST https://jobito-api-production.up.railway.app/jobs`
-- `GET https://jobito-api-production.up.railway.app/jobs`
-- `GET https://jobito-api-production.up.railway.app/jobs/company/:companyId`
-- `GET https://jobito-api-production.up.railway.app/jobs/applications/stats`
-- `GET https://jobito-api-production.up.railway.app/jobs/:id`
-- `PATCH https://jobito-api-production.up.railway.app/jobs/:id`
-- `DELETE https://jobito-api-production.up.railway.app/jobs/:id`
+* **الرابط الأساسي للخادم (Base URL):** `https://jobito-api-production.up.railway.app`
+* **بروتوكول التحقق (Auth Protocol):** جميع المسارات المحمية تتطلب إرسال رمز تسجيل الدخول كـ `Bearer Token` في رأس الطلب (`Authorization: Bearer <JWT_TOKEN>`).
 
-### 📝 Applications (التقديم على الوظائف)
-- `POST https://jobito-api-production.up.railway.app/applications`
-- `GET https://jobito-api-production.up.railway.app/applications/my-applications`
-- `GET https://jobito-api-production.up.railway.app/applications/job/:jobId`
-- `GET https://jobito-api-production.up.railway.app/applications/:id`
-- `PATCH https://jobito-api-production.up.railway.app/applications/:id/status`
+---
 
-### 🏢 Companies (الشركات)
-- `GET https://jobito-api-production.up.railway.app/companies`
-- `GET https://jobito-api-production.up.railway.app/companies/pending`
-- `GET https://jobito-api-production.up.railway.app/companies/:id`
-- `PATCH https://jobito-api-production.up.railway.app/companies/:id/status`
+## 1. مسارات المصادقة والحسابات (Authentication & Account APIs)
 
-### 🔔 Notifications (الإشعارات)
-- `POST https://jobito-api-production.up.railway.app/notifications/subscribe`
-- `GET https://jobito-api-production.up.railway.app/notifications`
-- `PATCH https://jobito-api-production.up.railway.app/notifications/:id/read`
-- `PATCH https://jobito-api-production.up.railway.app/notifications/read-all`
-- `DELETE https://jobito-api-production.up.railway.app/notifications/:id`
+تتعامل هذه المجموعة مع تسجيل المستخدمين، وتأكيد الهويات، وتأمين عمليات الدخول بمختلف الطرق:
 
-### 💬 Chat & AI (الدردشة والذكاء الاصطناعي)
-- `GET https://jobito-api-production.up.railway.app/chat/rooms`
-- `GET https://jobito-api-production.up.railway.app/chat/rooms/:roomId/messages`
-- `POST https://jobito-api-production.up.railway.app/chat/rooms/:roomId/messages`
-- `POST https://jobito-api-production.up.railway.app/ai-chatbot/chat`
-- `GET https://jobito-api-production.up.railway.app/ai-chatbot/history/:userId`
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/auth/register` | تسجيل حساب جديد في المنصة بوضع الانتظار لحين التفعيل. | `fullName`, `email`, `password`, `role`, `phone` |
+| **POST** | `/auth/login` | تسجيل الدخول الموحد (مستخدمين، شركات، مدراء) وإصدار رمز JWT. | `email`, `password` |
+| **POST** | `/auth/verify-email` | التحقق من الحساب وتفعيله باستخدام رمز الـ OTP المرسل للإيميل. | `email`, `code` |
+| **GET** | `/auth/verify-link` | التحقق التلقائي عند الضغط على رابط تفعيل الحساب في البريد الإلكتروني. | استعلامات الرابط (`email`, `code`) |
+| **POST** | `/auth/verify-firebase-phone` | التحقق وتفعيل الحساب باستخدام رقم الهاتف عبر رمز التحقق من Firebase. | `email`, `firebaseToken` |
+| **POST** | `/auth/resend-code` | إعادة إرسال رمز التفعيل OTP الجديد للبريد الإلكتروني. | `email` |
+| **POST** | `/auth/forgot-password` | إرسال رمز استعادة كلمة المرور عند نسيانها للبريد الإلكتروني. | `email` |
+| **POST** | `/auth/reset-password` | إعادة تعيين كلمة مرور جديدة باستخدام رمز الاستعادة المرسل. | `email`, `code`, `new_password` |
+| **POST** | `/auth/reset-password-google` | إعادة تعيين كلمة مرور جديدة بعد التحقق المسبق من حساب جوجل. | `googleToken`, `new_password` |
+| **POST** | `/auth/google-login` | تسجيل الدخول أو إنشاء حساب سريع وتلقائي بالمنصة عبر حساب جوجل. | `token` |
+| **POST** | `/auth/link-google` | ربط حساب جوجل الشخصي بالحساب الحالي النشط (يتطلب تسجيل دخول). | `googleToken` |
+| **POST** | `/auth/refresh-token` | تحديث رمز تسجيل الدخول JWT الحالي وتمديد الجلسة دون تسجيل خروج. | يتطلب الرمز القديم برأس الطلب |
+| **POST** | `/auth/upload-document` | رفع مستندات التفعيل (السجل التجاري، الهوية، شهادات المهن الحرة). | رفع ملف (`file`) كـ `Multipart FormData` |
 
-### 🖼️ Images (الصور)
-- `POST https://jobito-api-production.up.railway.app/images/upload`
-- `PUT https://jobito-api-production.up.railway.app/images/profile`
-- `PUT https://jobito-api-production.up.railway.app/images/banner`
-- `GET https://jobito-api-production.up.railway.app/images/entity/:type/:id`
-- `GET https://jobito-api-production.up.railway.app/images/profile/:userId`
-- `DELETE https://jobito-api-production.up.railway.app/images/:imageId`
+---
 
-### ⭐ Favorites (المفضلة)
-- `POST https://jobito-api-production.up.railway.app/favorites/toggle/:jobId`
-- `GET https://jobito-api-production.up.railway.app/favorites`
+## 2. مسارات إدارة المستخدمين وملفاتهم الشخصية (User Profile APIs)
 
-### 🛠️ Admin & Ops (الإدارة والعمليات)
-- `POST https://jobito-api-production.up.railway.app/admin/login`
-- `POST https://jobito-api-production.up.railway.app/admin/setup`
-- `GET https://jobito-api-production.up.railway.app/admin/dashboard/stats`
-- `GET https://jobito-api-production.up.railway.app/admin/dashboard/charts`
-- `GET https://jobito-api-production.up.railway.app/admin/staff`
-- `GET https://jobito-api-production.up.railway.app/admin/activity-log`
-- `GET https://jobito-api-production.up.railway.app/admin/ops-chart`
-- `GET https://jobito-api-production.up.railway.app/admin/system-requests`
-- `PATCH https://jobito-api-production.up.railway.app/admin/system-requests/:id`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/users`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/users/:id`
-- `POST https://jobito-api-production.up.railway.app/admin/ops/users/action`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/companies`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/companies/pending`
-- `POST https://jobito-api-production.up.railway.app/admin/ops/companies/review`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/criminal-records`
-- `POST https://jobito-api-production.up.railway.app/admin/ops/criminal-records/review`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/support/tickets`
-- `POST https://jobito-api-production.up.railway.app/admin/ops/support/tickets/:id/reply`
-- `PATCH https://jobito-api-production.up.railway.app/admin/ops/support/tickets/:id/close`
-- `GET https://jobito-api-production.up.railway.app/admin/ops/content/reported`
-- `POST https://jobito-api-production.up.railway.app/admin/ops/content/review`
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/users/me` | جلب تفاصيل الملف الشخصي الكامل للمستخدم الحالي (بيانات أساسية وسيرة ذاتية). | يتطلب تسجيل دخول |
+| **PUT** | `/users/me` | تحديث تفاصيل الملف الشخصي (الاسم، المهارات، النبذة الشخصية، التعليم، والخبرات). | الحقول المراد تحديثها |
+| **PATCH** | `/users/me/theme` | تغيير المظهر المفضل للمنصة للمستخدم الحالي (مظهر داكن / مظهر فاتح). | `theme` (قيمتها: `light` أو `dark`) |
+| **PATCH** | `/users/me/language` | تغيير اللغة المفضلة لواجهة المستخدم (عربي / إنجليزي). | `language` (قيمتها: `ar` أو `en`) |
+| **PUT** | `/users/me/password` | تغيير كلمة المرور للمستخدم الحالي بعد مطابقة وتأكيد القديمة. | `oldPassword`, `newPassword` |
+| **DELETE** | `/users/me` | تقديم طلب رسمي لحذف وإلغاء الحساب وجدولته للحذف الفعلي بعد 7 أيام. | يتطلب تسجيل دخول |
+| **PATCH** | `/users/me/cancel-deletion` | إلغاء طلب حذف الحساب واسترجاع الحساب لوضعه الطبيعي النشط. | يتطلب تسجيل دخول |
+| **GET** | `/users/me/deletion-status` | الاستعلام عن حالة الحذف والمدة المتبقية باليوم والساعة قبل الحذف النهائي. | يتطلب تسجيل دخول |
 
-### 🌍 Translations (الترجمة)
-- `GET https://jobito-api-production.up.railway.app/translations`
-- `POST https://jobito-api-production.up.railway.app/translations/batch`
+---
 
-### 📊 Dashboard & Monitoring (المراقبة والإحصائيات)
-- `POST https://jobito-api-production.up.railway.app/dashboard/stats`
-- `POST https://jobito-api-production.up.railway.app/dashboard/applicants-summary`
-- `POST https://jobito-api-production.up.railway.app/dashboard/job-updates`
-- `POST https://jobito-api-production.up.railway.app/dashboard/job-listing-stats`
-- `GET https://jobito-api-production.up.railway.app/monitoring/reports`
-- `POST https://jobito-api-production.up.railway.app/monitoring/log`
+## 3. مسارات الشركات والملفات التعريفية لها (Company Profile APIs)
 
-### 📞 Support & Content (الدعم والمحتوى)
-- `GET https://jobito-api-production.up.railway.app/support/help/categories`
-- `GET https://jobito-api-production.up.railway.app/support/help/articles`
-- `GET https://jobito-api-production.up.railway.app/support/help/articles/:id`
-- `POST https://jobito-api-production.up.railway.app/support/contact`
-- `GET https://jobito-api-production.up.railway.app/content/services`
-- `GET https://jobito-api-production.up.railway.app/content/features`
-- `GET https://jobito-api-production.up.railway.app/content/stats`
-- `POST https://jobito-api-production.up.railway.app/content/reports`
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/companies` | عرض قائمة الشركات المسجلة بالمنصة مع دعم التصفح والبحث الذكي. | عوامل تصفية اختيارية (`Query Filters`) |
+| **GET** | `/companies/:id` | جلب وعرض تفاصيل شركة محددة باستخدام معرّفها الرقمي الفريد. | معرّف الشركة بالرابط (`id`) |
+| **POST** | `/companies` | إنشاء وتأسيس ملف تعريفي جديد للشركة (خاص بالمسؤولين أو الحسابات المسجلة). | بيانات الشركة التعاقدية والتأسيسية |
+| **PATCH** | `/companies/:id` | تحديث بيانات وتفاصيل ملف الشركة التعريفي باستخدام معرف الشركة الرقمي. | البيانات والمستندات المراد تحديثها |
+| **GET** | `/companies/my/profile` | جلب الملف التعريفي للشركة المرتبطة مباشرة بحساب المستخدم الحالي. | يتطلب تسجيل دخول شركة |
+| **PATCH** | `/companies/my/profile` | تحديث بيانات الشركة للمستخدم الحالي أو إنشائه تلقائياً في حال عدم وجوده. | بيانات ملف الشركة المحدثة |
+| **GET** | `/companies/my/dashboard-summary`| جلب ملخص لوحة التحكم لأرباب الأعمال (إجمالي الوظائف والمتقدمين ونسب القبول). | يتطلب تسجيل دخول شركة |
+| **GET** | `/companies/:id/statistics` | جلب بيانات المشاهدات وإحصاءات التقديم لمدد زمنية محددة لعرض الرسوم البيانية. | معرّف الشركة، بارامتر الفترة (`period`) |
+
+---
+
+## 4. مسارات الوظائف والبحث الفعّال (Jobs & Search APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/jobs` | جلب وتصفح قائمة الوظائف المنشورة مع تصفية متقدمة (الموقع، الراتب، والتصنيف). | عوامل تصفية اختيارية بالرابط |
+| **GET** | `/jobs/categories` | جلب وتصفح جميع تصنيفات الوظائف المتوفرة بالمنصة لعرضها بالقوائم. | لا يوجد |
+| **GET** | `/jobs/nearby` | البحث عن الوظائف القريبة جغرافياً من موقع الباحث بالاعتماد على إحداثيات GPS. | إحداثيات الموقع ونصف القطر بالرابط |
+| **GET** | `/jobs/:id` | عرض التفاصيل الكاملة لوظيفة معينة مع متطلباتها وتفاصيل الناشر. | معرّف الوظيفة بالرابط (`id`) |
+| **GET** | `/jobs/similar/:id` | جلب قائمة الوظائف الشبيهة بالوظيفة المعروضة بناءً على التصنيف والمهارات. | معرّف الوظيفة بالرابط (`id`) |
+| **POST** | `/jobs` | نشر وإعلان وظيفة جديدة على المنصة (متاح للشركات والمهنيين الأحرار). | بيانات وتفاصيل الوظيفة والشروط والمهارات |
+| **POST** | `/jobs/bulk` | نشر مجموعة من الوظائف دفعة واحدة بسجل واحد (للتغذية المكثفة والشركات الكبرى).| مصفوفة من كائنات الوظائف |
+| **PATCH** | `/jobs/:id` | تعديل وتحديث بيانات وظيفة منشورة مسبقاً (مسموح لصاحب الوظيفة فقط). | البيانات والمعدلات الجديدة |
+| **DELETE** | `/jobs/:id` | حذف وإلغاء إعلان الوظيفة المنشورة نهائياً من قاعدة البيانات. | معرّف الوظيفة بالرابط (`id`) |
+| **POST** | `/jobs/:id/view` | تسجيل زيارة ومشاهدة جديدة للإعلان لحساب تفاعلات ونسب قراءات الوظيفة. | معرف الجلسة (`sessionId`) بالـ Body |
+| **GET** | `/jobs/:id/analytics` | جلب تحليلات وإحصاءات تفصيلية تفاعلية حول الوظيفة والجمهور المستهدف. | معرّف الوظيفة بالرابط |
+
+---
+
+## 5. مسارات التقديم على الوظائف (Job Application APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/applications` | التقديم على وظيفة معينة وإرسال ملفات السيرة الذاتية وخطاب التغطية والعنوان. | `job_id`, `portfolioUrl`, `coverLetter`, `resumeUrl` |
+| **GET** | `/applications/my` | جلب قائمة الوظائف والطلبات التي تقدم إليها الباحث الحالي وتاريخ حالتها. | يتطلب تسجيل دخول باحث |
+| **GET** | `/applications/job/:jobId` | عرض المتقدمين لوظيفة محددة بالترتيب مع بيانات سيرهم الذاتية (للناشر فقط). | معرّف الوظيفة بالرابط (`jobId`) |
+| **GET** | `/applications/company/:companyId/hired` | جلب الباحثين المقبولين نهائياً وتم تعيينهم من قبل الشركة المحددة. | معرّف الشركة بالرابط |
+| **GET** | `/applications/user/hired` | جلب جميع طلبات التوظيف المقبولة والناجحة نهائياً للمستخدم الحالي. | يتطلب تسجيل دخول |
+| **GET** | `/applications/:id` | عرض تفاصيل طلب تقديم محدد بالمعرف البرمجي الفريد. | معرّف طلب التقديم بالرابط (`id`) |
+| **PATCH** | `/applications/:id/status` | مراجعة وتحديث حالة طلب التقديم (قبول، رفض، جدولة مقابلة، توظيف). | `status` (مثال: `hired`, `rejected`, `interview`) |
+| **GET** | `/applications/status/:jobId` | التحقق الفوري عما إذا كان الباحث قد تقدم سابقاً لهذه الوظيفة لعرض حالتها. | معرّف الوظيفة بالرابط |
+| **DELETE** | `/applications/:id` | سحب طلب التقديم على الوظيفة وإلغائه نهائياً (متاح للباحث فقط). | معرّف طلب التقديم بالرابط |
+
+---
+
+## 6. مسارات الدردشة والرسائل المباشرة والوسائط (Chat & Media APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/chat/p2p` | إرسال رسالة نصية أو ملف مباشرة لمستقبل معين ثنائي الاتجاه P2P. | `senderId`, `recipientId`, `content`, `type` |
+| **GET** | `/chat/p2p/history` | جلب وعرض سجل المحادثة المباشرة بين مستخدمين بالصفحات والتاريخ. | المتغيرات بالرابط (`userId`, `otherId`, `page`) |
+| **GET** | `/chat/my-chats/:userId` | جلب المحادثات الجارية للمستخدم الحالي مع تفاصيل الطرف الآخر وحالة القراءة. | معرّف المستخدم بالرابط |
+| **PUT** | `/chat/p2p/read` | تحديث وقراءة كافة الرسائل الواردة غير المقروءة لتصبح مقروءة للطرفين. | `userId`, `otherId` |
+| **PUT** | `/chat/p2p/:id` | تعديل وتغيير محتوى رسالة مرسلة مسبقاً بنص جديد. | `content` بالـ Body، معرّف الرسالة بالرابط |
+| **DELETE** | `/chat/p2p/:id` | حذف رسالة مرسلة نهائياً من سجل المحادثة للطرفين. | معرّف الرسالة بالرابط |
+| **POST** | `/chat/upload` | رفع الصور والمستندات المرفقة أثناء المحادثات الفورية. | ملف الرفع (`file`) كـ `Multipart FormData` |
+| **POST** | `/chat/upload-audio` | رفع الرسائل الصوتية المسجلة وتخزين مدتها لحفظها في سجل المحادثة. | `file` (صوت)، `senderId`, `recipientId`, `duration` |
+| **GET** | `/chat/media/:fileName` | تحميل وبث ملفات الصور والمقاطع الصوتية المرفوعة في غرف المحادثة. | اسم الملف بالرابط (`fileName`) |
+| **GET** | `/chat/search-users` | البحث عن مستخدمين بالاسم لبدء محادثة فورية جديدة معهم بالمنصة. | اسم البحث `q` ومعرّف الباحث الحالي |
+| **GET** | `/chat/user-info/:userId` | جلب البيانات المعروضة لخصائص الطرف الآخر بالمحادثة (الاسم والصورة الشخصية). | معرّف المستخدم بالرابط |
+| **POST** | `/chat/users-info` | جلب بيانات مجموعة مستخدمين دفعة واحدة (لتحسين أداء عرض المحادثات). | مصفوفة المعرفات `userIds` بالـ Body |
+
+---
+
+## 7. مسارات تحليلات الذكاء الاصطناعي الفعّالة (AI Analytics APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/ai/smart-search` | محرك البحث الذكي: جلب وتصفية الوظائف بالاعتماد على مطابقة الكلمات والوسوم الدلالية. | `q` (نص البحث الأصلي)، والموقع والتصنيف اختياري |
+| **POST** | `/ai/auto-tag` | التحليل التلقائي وتوليد الكلمات الدلالية ووسوم المهارات المطلوبة من العنوان والوصف. | `title`, `description` (اختياري) |
+| **GET** | `/ai/expand-query` | توسيع وتكبير الكلمات البحثية وتوفير المترادفات لها في الكواليس (اختبار وتطوير). | نص البحث `q` |
+| **POST** | `/ai/score-cv` | التحليل الذكي لحساب نسبة توافق السيرة الذاتية مع متطلبات وظيفة معينة بنسبة مئوية. | `userSkills`, `userBio`, `jobTitle`, `jobDescription` |
+| **POST** | `/ai/generate-job-desc` | توليد وصياغة وصف وظيفي احترافي جذاب بناءً على معطيات بسيطة من السيرفر. | `title`, `category`, `experience`, `location` |
+| **POST** | `/ai/cover-letter` | توليد وصياغة خطاب تغطية ذكي ومقنع وموجه مباشرة للوظيفة المستهدفة بالشركة. | `userName`, `userSkills`, `userExperience`, `jobTitle` |
+| **GET** | `/ai/analytics/top-searches`| جلب الكلمات والعبارات الأكثر بحثاً في محركات البحث بالمنصة لفترات معينة. | فترة الأيام الاختيارية `days` |
+| **GET** | `/ai/analytics/top-companies`| جلب الشركات الأكثر تفاعلاً وزيارة وقراءة للملفات التعريفية بالمنصة. | فترة الأيام الاختيارية `days` |
+| **GET** | `/ai/analytics/top-jobs` | جلب وعرض الوظائف وإعلانات التوظيف الأكثر مشاهدة من قبل الباحثين. | فترة الأيام الاختيارية `days` |
+| **GET** | `/ai/analytics/traffic` | جلب تقارير الزيارات ومعدلات المشاهدة الإجمالية وحركة المرور بالسيرفر. | فترة الأيام الاختيارية `days` |
+| **POST** | `/ai/analytics/send-report`| توليد تقرير حركة المرور والنشاط الكامل للمنصة وإرساله بشكل آلي لبريد الإدارة. | عدد الأيام للتقرير `days` |
+
+---
+
+## 8. مسارات الشات بوت التفاعلي (AI Chatbot Service APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/ai-chatbot/chat` | إرسال رسالة نصية أو مرفق صورة للشات بوت الذكي وتلقي الرد المباشر بأسلوب التدفق SSE. | `message`, `userId`, `image` (اختياري)، `fileType` |
+| **GET** | `/ai-chatbot/history/:userId` | جلب السجلات الكاملة للمحادثات السابقة التي دارت بين الباحث والشات بوت. | معرّف الباحث بالرابط |
+
+---
+
+## 9. مسارات إشعارات الويب والهاتف (Push Notifications APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/push/register/fcm` | تسجيل وتحديث معرّف الجهاز (Device Token) الممنوح من Firebase لإرسال إشعارات الهاتف. | `userId`, `deviceToken`, `deviceName` |
+| **POST** | `/push/register/web` | تسجيل وحفظ كائن الاشتراك لمتصفحات الويب (Web Push Subscription) لإشعارات الويب. | `userId`, `subscription`, `deviceName` |
+| **DELETE** | `/push/unregister/:subscriptionId`| إلغاء تفعيل اشتراك جهاز محدد ومنع إرسال أي إشعارات إضافية إليه. | معرّف الاشتراك بالرابط، ومعرّف المستخدم |
+| **GET** | `/push/subscriptions/:userId`| جلب الأجهزة والاشتراكات الفعالة المسجلة لإشعارات المستخدم الحالي بالمنصة. | معرّف المستخدم بالرابط |
+| **GET** | `/push/vapid-key` | جلب المفتاح العام القياسي VAPID للويب من السيرفر لبدء تهيئة إشعارات الويب. | لا يوجد |
+
+---
+
+## 10. الترجمة وتذاكر الدعم والصفحة الرئيسية (General Setup & Support APIs)
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/translations` | جلب ملف القاموس الكامل لترجمات الواجهة بناءً على اللغة المطلوبة. | لغة الواجهة المطلوبة بالرابط `lang` |
+| **GET** | `/support/help/categories` | جلب وتصفح تصنيفات وأقسام مقالات المساعدة المتوفرة بمركز المساعدة. | لا يوجد |
+| **GET** | `/support/help/articles` | البحث في مقالات الدعم والمساعدة وحلول المشاكل بالكلمات المفتاحية. | كلمة البحث `q` بالرابط |
+| **GET** | `/support/help/articles/:id` | عرض تفاصيل مقال دعم محدد بخطوات الحل والمسائل المرتبطة به. | معرّف المقال بالرابط |
+| **POST** | `/support/contact` | إرسال طلب تواصل أو تذكرة دعم للزوار والباحثين إلى خادم بريد الإدارة آلياً. | `name`, `email`, `subject`, `message`, `preferredContact` |
+| **GET** | `/content/services` | جلب قائمة الخدمات وميزات الدعم الفعلي لعرضها بالصفحة الرئيسية للموقع. | لا يوجد |
+| **GET** | `/content/features` | جلب الميزات التنافسية وعناصر النجاح لعرضها بالصفحة الرئيسية للمنصة. | لا يوجد |
+| **GET** | `/content/stats` | جلب إحصاءات المنصة الحية (إجمالي التعيينات والشركات والوظائف) للزوار. | لا يوجد |
+| **POST** | `/content/reports` | تقديم شكوى أو إبلاغ حول محتوى إعلان أو وظيفة أو حساب مستخدم مسيء بالمنصة. | كائن الشكوى مع تفاصيل المحتوى |
+
+---
+
+## 11. لوحة التحكم الإدارية وإدارة عمليات النظام (Admin & Operations APIs)
+
+مجموعة واجهات مخصصة **لطاقم الإدارة العليا (Super Admins)** و **مدراء العمليات (Operation Managers)** لإدارة ومراقبة المنصة:
+
+### أ) لوحة التحكم والمصادقة وإدارة المسؤولين (Admin Controls)
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | الصلاحية المطلوبة (Roles Allowed) |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/admin/setup` | إنشاء حساب المدير المالك الأول للنظام (Super Admin) لأول مرة لتفادي الاختراقات. | متاح للجميع لمرة واحدة فقط |
+| **POST** | `/admin/login` | تسجيل الدخول للنظام الإداري للمدراء وإصدار رمز وصول JWT خاص بهم. | متاح لجميع المشرفين والمدراء |
+| **GET** | `/admin/dashboard/stats` | جلب الإحصاءات العامة الشاملة للنظام (المستخدمين، الوظائف، بلاغات المحتوى). | المدير العام (Super Admin) |
+| **GET** | `/admin/dashboard/charts` | جلب بيانات الرسم البياني الأسبوعي لتفاعلات وعمليات المنصة التاريخية. | المدير العام (Super Admin) |
+| **GET** | `/admin/maintenance` | الاستعلام عن وضع الصيانة الشامل للنظام ومعرفة ما إذا كان مفعّلاً أم لا. | المشرفين والمدراء |
+| **PATCH** | `/admin/maintenance` | تشغيل أو إطفاء وضع الصيانة الشامل للمنصة (يقفل التسجيل والدخول العام). | المدير العام (Super Admin) |
+| **POST** | `/admin/invite` | دعوة وإنشاء حساب مسؤول أو مدير عمليات جديد برول محدد بالصلاحيات. | المدير العام (Super Admin) |
+| **GET** | `/admin/list` | جلب وعرض قائمة المشرفين والمسؤولين والمدراء وطاقم العمل بالكامل. | المدير العام (Super Admin) |
+| **GET** | `/admin/staff` | جلب طاقم العمل بالكامل وعرضه لكافة المشرفين لأغراض التعاون الداخلي. | متاح لجميع المشرفين والمدراء |
+| **GET** | `/admin/activity-log` | جلب سجل عمليات الإدارة التاريخي (بشكل مفصل ومؤرخ) لمراقبة الأفعال. | المدير العام (Super Admin) |
+| **GET** | `/admin/ops-activities` | جلب نشاطات طاقم إدارة العمليات (شخصي للمدير، أو عام للـ Super Admin). | متاح لجميع المشرفين والمدراء |
+| **GET** | `/admin/ops-chart` | جلب بيانات رسم بياني للنشاط التاريخي لآخر 24 ساعة لمدير العمليات الحالي. | متاح لجميع المشرفين والمدراء |
+| **GET** | `/admin/system-requests` | عرض طلبات النظام الحساسة المرفوعة من مدراء العمليات للموافقة عليها. | المدير العام (Super Admin) |
+| **PATCH** | `/admin/system-requests/:id` | مراجعة واعتماد أو رفض طلب نظام حساس محدد (مثل ميزانية أو صلاحيات). | المدير العام (Super Admin) |
+| **GET** | `/admin/profile` | جلب بيانات الملف التعريفي والمهني للمدير المسؤول الحالي المسجل دخوله. | متاح لجميع المشرفين والمدراء |
+| **PATCH** | `/admin/change-password` | تغيير كلمة المرور للمسؤول الحالي بعد التحقق من صحة القديمة. | متاح لجميع المشرفين والمدراء |
+
+### ب) إدارة حسابات المستخدمين والتحقق ورقابة المحتوى (Operations & Reviews)
+يتطلب الوصول لهذه المسارات أن يكون المسؤول برول **مدير عمليات (Operation Manager)** أو **مدير عام (Super Admin)**:
+
+| طريقة الطلب (Method) | مسار الرابط (Endpoint) | غرض ووظيفة المسار الفعلي | البيانات المطلوبة (Payload) / المدخلات |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/admin/ops/users` | جلب وتصفح كافة حسابات مستخدمي المنصة بانتظام مع إمكانية الفلترة والبحث. | `search`, `accountType`, `status`, `page` |
+| **GET** | `/admin/ops/users/:id` | جلب السجلات والخصائص وتفاصيل الحساب الكامل لمستخدم معين بالمنصة. | معرّف المستخدم بالرابط |
+| **POST** | `/admin/ops/users/action` | تنفيذ عقوبة أو إجراء رقابي على حساب مستخدم (تحذير، إيقاف، حظر). | `targetUserId`, `actionType` (`WARNING`, `SUSPEND`, `BAN`), `reason` |
+| **GET** | `/admin/ops/companies/pending` | عرض وعرض ملفات ومستندات الشركات المسجلة حديثاً بانتظار الموافقة والاعتماد. | لا يوجد |
+| **GET** | `/admin/ops/companies/:id` | جلب وتصفح تفاصيل ومستندات شركة بانتظار مراجعة طلب تفعيلها بالمنصة. | معرّف الشركة بالرابط |
+| **POST** | `/admin/ops/companies/review` | مراجعة واعتماد ملف الشركة (قبول وتفعيل حساب، أو رفض مع ذكر الأسباب للبريد). | `companyId`, `action` (`approve` أو `reject`), `rejectionReason` |
+| **GET** | `/admin/ops/companies` | تصفح واستعراض قائمة الشركات المسجلة بالكامل مع تصفيتها حسب حالتها. | حالة الشركة بالرابط `status` |
+| **GET** | `/admin/ops/content/reported` | جلب بلاغات الإساءة والشكاوى المقدمة ضد محتويات بالمنصة بانتظار المراجعة. | حالة البلاغات بالرابط |
+| **POST** | `/admin/ops/content/review` | اتخاذ قرار بخصوص البلاغات المرفوعة (حذف المحتوى تماماً، أو تبرئة وحفظ البلاغ).| `reportId`, `action` (`delete` أو `dismiss`) |
+| **GET** | `/admin/ops/support/tickets` | تصفح وجلب تذاكر الدعم والاستفسارات الفنية الواردة من مستخدمي المنصة. | حالة التذاكر بالرابط |
+| **GET** | `/admin/ops/support/tickets/:id`| جلب تفاصيل محادثة تذكرة فنية معينة والرسائل المتبادلة بها لدراستها. | معرّف التذكرة بالرابط |
+| **POST** | `/admin/ops/support/tickets/:id/reply`| إرسال رد رسمي للمستخدم على تذكرته الفنية يصله في مركز الدعم وبالبريد. | كائن الرد `content` بالـ Body |
+| **PATCH** | `/admin/ops/support/tickets/:id/close`| إغلاق تذكرة الدعم بالكامل وتأكيد حل المشكلة الفنية للعميل نهائياً. | معرّف التذكرة بالرابط |
+| **GET** | `/admin/ops/criminal-records` | عرض المهنيين الأحرار الذين رفعوا صحيفة الحالة الجنائية للمراجعة للموافقة والتحقق. | حالة الصحيفة بالرابط `status` |
+| **POST** | `/admin/ops/criminal-records/review`| اتخاذ قرار بمراجعة صحيفة الحالة الجنائية (قبول وتوثيق الحساب، أو رفضه). | `userId`, `action` (`approve` أو `reject`), `reason` |
+| **POST** | `/admin/ops/system-request` | رفع طلب نظام حساس للمدير العام (Super Admin) لاعتماده وتفعيله للنظام. | كائن تفاصيل الطلب برأس الحقل |

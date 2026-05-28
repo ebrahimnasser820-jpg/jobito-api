@@ -202,20 +202,8 @@ export class AdminDashboardService {
 
     if (adminId) {
       query.where('log.adminId = :adminId', { adminId });
-    } else {
-      // Show ONLY operations manager activities in the general list
-      const opsManagers = await this.adminRepo.find({
-        where: { role: 'operation_manager' as any },
-        select: ['adminId'],
-      });
-      const opsManagerIds = opsManagers.map(m => m.adminId);
-      
-      if (opsManagerIds.length > 0) {
-        query.where('log.adminId IN (:...ids)', { ids: opsManagerIds });
-      } else {
-        return { data: [], total: 0, page, limit, totalPages: 0 };
-      }
     }
+    // If no adminId is passed, it is accessed by Super Admin, so we return all system activities without restricting to operations managers
 
     const [logs, total] = await query.getManyAndCount();
 
