@@ -55,6 +55,11 @@ export class ApplicationsService {
       throw new BadRequestException('لقد تقدمت بالفعل لهذه الوظيفة');
     }
 
+    // Check if the user is the creator/owner of this job
+    if (job.userId === userId) {
+      throw new BadRequestException('لا يمكنك التقديم على وظيفة قمت بنشرها بنفسك');
+    }
+
     let finalResumeUrl = data?.resumeUrl;
     const profile = await this.profileRepo.findOne({ where: { userId } });
 
