@@ -12,6 +12,7 @@ import { OtpCode } from './otp-code.entity.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { Admin } from '../admin/entities/admin.entity.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
+import { AdminActivityLog } from '../admin/entities/admin-activity-log.entity.js';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
 
 @Global()
@@ -21,7 +22,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
     ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     CompaniesModule,
-    TypeOrmModule.forFeature([OtpCode, Admin, AuditLog]),
+    TypeOrmModule.forFeature([OtpCode, Admin, AuditLog, AdminActivityLog]),
     AuditLogsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

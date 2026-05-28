@@ -23,6 +23,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { Admin } from '../admin/entities/admin.entity.js';
 import { AdminDashboardService } from '../admin/services/admin-dashboard.service.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
+import { AdminActivityLog } from '../admin/entities/admin-activity-log.entity.js';
 import * as admin from 'firebase-admin';
 import { Vonage } from '@vonage/server-sdk';
 @Injectable()
@@ -38,6 +39,8 @@ export class AuthService {
     private adminRepo: Repository<Admin>,
     @InjectRepository(AuditLog)
     private auditLogRepo: Repository<AuditLog>,
+    @InjectRepository(AdminActivityLog)
+    private adminActivityLogRepo: Repository<AdminActivityLog>,
     private notificationsService: NotificationsService, // Changed from ClientProxy to Service
     private mongoUserProfileService: MongoUserProfileService,
     @Inject(WINSTON_MODULE_PROVIDER)
@@ -259,9 +262,9 @@ export class AuthService {
           isActive: true,
         }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on verify: ${err.message}`));
 
-        // Log user verification to AdminActivityLog
+        // Log user verification to AdminActivityLog (the table Operations Monitor reads from)
         try {
-          await this.activityLogRepo.save(this.activityLogRepo.create({
+          await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
             actionType: 'USER_VERIFIED',
             targetEntity: 'User',
             targetId: user.userId,
@@ -416,14 +419,15 @@ export class AuthService {
         avatar: admin.avatarUrl,
       };
 
-      // Log admin login activity so it instantly registers in Operations Monitor
+      // Log admin login activity to AdminActivityLog (the table Operations Monitor reads from)
       try {
-        await this.activityLogRepo.save(this.activityLogRepo.create({
+        await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
           adminId: admin.adminId,
           actionType: 'LOGIN',
           targetEntity: 'Admin',
           targetId: admin.adminId,
           description: `${admin.fullName} logged in successfully`,
+          metadata: { email: admin.email, role: admin.role },
         }));
       } catch (logErr) {
         this.logger.warn(`Failed to log admin login to AdminActivityLog: ${logErr.message}`);
@@ -514,14 +518,14 @@ export class AuthService {
         isActive: user.isActive,
       }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on login: ${err.message}`));
 
-      // Log this user login activity so it appears in the Operations Monitor
+      // Log user login activity to AdminActivityLog (the table Operations Monitor reads from)
       try {
-        await this.activityLogRepo.save(this.activityLogRepo.create({
+        await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
           actionType: 'USER_LOGIN',
           targetEntity: 'User',
           targetId: user.userId,
           description: `User ${user.fullName} (${user.role}) logged in successfully`,
-          metadata: { email: user.email, role: user.role }
+          metadata: { email: user.email, role: user.role },
         }));
       } catch (logErr) {
         this.logger.warn(`Failed to log user login to AdminActivityLog: ${logErr.message}`);
