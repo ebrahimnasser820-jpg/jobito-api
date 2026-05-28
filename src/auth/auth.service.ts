@@ -259,6 +259,19 @@ export class AuthService {
           isActive: true,
         }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on verify: ${err.message}`));
 
+        // Log user verification to AdminActivityLog
+        try {
+          await this.activityLogRepo.save(this.activityLogRepo.create({
+            actionType: 'USER_VERIFIED',
+            targetEntity: 'User',
+            targetId: user.userId,
+            description: `New user verified and activated: ${user.fullName} (${user.role})`,
+            metadata: { email: user.email, role: user.role }
+          }));
+        } catch (logErr) {
+          this.logger.warn(`Failed to log user verification to AdminActivityLog: ${logErr.message}`);
+        }
+
         return { message: 'Email verified and profile activated successfully!' };
       } catch (err) {
         throw new BadRequestException(err.message || 'Invalid or expired code.');
@@ -403,6 +416,19 @@ export class AuthService {
         avatar: admin.avatarUrl,
       };
 
+      // Log admin login activity so it instantly registers in Operations Monitor
+      try {
+        await this.activityLogRepo.save(this.activityLogRepo.create({
+          adminId: admin.adminId,
+          actionType: 'LOGIN',
+          targetEntity: 'Admin',
+          targetId: admin.adminId,
+          description: `${admin.fullName} logged in successfully`,
+        }));
+      } catch (logErr) {
+        this.logger.warn(`Failed to log admin login to AdminActivityLog: ${logErr.message}`);
+      }
+
       return { access_token: this.jwtService.sign(payload) };
     }
 
@@ -487,6 +513,19 @@ export class AuthService {
         classification: user.classification || null,
         isActive: user.isActive,
       }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on login: ${err.message}`));
+
+      // Log this user login activity so it appears in the Operations Monitor
+      try {
+        await this.activityLogRepo.save(this.activityLogRepo.create({
+          actionType: 'USER_LOGIN',
+          targetEntity: 'User',
+          targetId: user.userId,
+          description: `User ${user.fullName} (${user.role}) logged in successfully`,
+          metadata: { email: user.email, role: user.role }
+        }));
+      } catch (logErr) {
+        this.logger.warn(`Failed to log user login to AdminActivityLog: ${logErr.message}`);
+      }
 
       const payload: any = {
         sub: user.userId,

@@ -208,16 +208,33 @@ export class AdminDashboardService {
     const [logs, total] = await query.getManyAndCount();
 
     return {
-      data: logs.map(log => ({
-        logId: log.logId,
-        adminName: log.admin?.fullName || 'Unknown',
-        adminEmail: log.admin?.email || '',
-        actionType: log.actionType,
-        targetEntity: log.targetEntity,
-        targetId: log.targetId,
-        description: log.description,
-        createdAt: log.createdAt,
-      })),
+      data: logs.map(log => {
+        let adminName = 'System';
+        let adminEmail = 'system@jobito.com';
+        
+        if (log.admin?.fullName) {
+          adminName = log.admin.fullName;
+          adminEmail = log.admin.email;
+        } else if (log.metadata) {
+          // Fallback to metadata for standard user actions recorded in the same activity table
+          const meta = typeof log.metadata === 'string' ? JSON.parse(log.metadata) : log.metadata;
+          if (meta.email) {
+            adminEmail = meta.email;
+            adminName = meta.email.split('@')[0];
+          }
+        }
+
+        return {
+          logId: log.logId,
+          adminName,
+          adminEmail,
+          actionType: log.actionType,
+          targetEntity: log.targetEntity,
+          targetId: log.targetId,
+          description: log.description,
+          createdAt: log.createdAt,
+        };
+      }),
       total,
       page,
       limit,
