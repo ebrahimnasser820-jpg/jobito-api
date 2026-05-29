@@ -169,14 +169,14 @@ export class AdminCompanyReviewService {
         'user.classification',
         'user.createdAt',
       ])
-      .where('user.role = :role', { role: 'student' })
+      .where('user.classification = :classification', { classification: 'tradesman' })
       .andWhere('user.criminalRecordUrl IS NOT NULL')
       .andWhere("user.criminalRecordUrl != ''")
       .orderBy('user.createdAt', 'DESC');
 
     if (status === 'pending') {
       // Users who uploaded but haven't been explicitly verified
-      qb.andWhere("(user.accountStatus = 'active' OR user.accountStatus IS NULL)");
+      qb.andWhere("(user.accountStatus = 'pending' OR user.accountStatus = 'active' OR user.accountStatus IS NULL)");
     } else if (status === 'verified') {
       qb.andWhere("user.accountStatus = 'verified'");
     } else if (status === 'rejected') {

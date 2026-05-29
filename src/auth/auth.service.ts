@@ -254,7 +254,7 @@ export class AuthService {
           try {
             const registrationData = user.registrationData ? JSON.parse(user.registrationData) : {};
             await this.usersService.update(user.userId, {
-              classification: registrationData.classification || 'job_seeker',
+              classification: registrationData.classification || null,
               location: registrationData.location || '',
               bio: '', // Initial empty bio
               skills: [],
@@ -374,7 +374,7 @@ export class AuthService {
         try {
           const registrationData = user.registrationData ? JSON.parse(user.registrationData) : {};
           await this.usersService.update(user.userId, {
-            classification: registrationData.classification || 'job_seeker',
+            classification: registrationData.classification || null,
             location: registrationData.location || '',
             bio: '', 
             skills: [],
@@ -532,7 +532,7 @@ export class AuthService {
       }
 
       // Block tradesmen whose criminal record is pending or rejected
-      if (user.role === 'student' && user.classification === 'tradesman') {
+      if (user.classification === 'tradesman') {
         if (user.accountStatus === 'pending') {
           throw new UnauthorizedException('حسابك قيد المراجعة حالياً بانتظار موافقة المسؤول على الفيش الجنائي. الرجاء المحاولة لاحقاً بعد تفعيل الحساب.');
         }
@@ -582,6 +582,7 @@ export class AuthService {
         notificationPreferences: user.notificationPreferences || null,
         services: user.services || [],
         criminalRecordUrl: user.criminalRecordUrl || null,
+        accountStatus: user.accountStatus,
       };
 
       // If user is admin in the main table, add admin claims so they can pass Admin guards
@@ -724,7 +725,7 @@ export class AuthService {
       }
 
       // Block tradesmen whose criminal record is pending or rejected
-      if (user.role === 'student' && user.classification === 'tradesman') {
+      if (user.classification === 'tradesman') {
         if (user.accountStatus === 'pending') {
           throw new UnauthorizedException('حسابك قيد المراجعة حالياً بانتظار موافقة المسؤول على الفيش الجنائي. الرجاء المحاولة لاحقاً بعد تفعيل الحساب.');
         }
@@ -762,6 +763,7 @@ export class AuthService {
         deletionRequestedAt: user.deletionRequestedAt || null,
         services: user.services || [],
         criminalRecordUrl: user.criminalRecordUrl || null,
+        accountStatus: user.accountStatus,
       };
 
       // Log Google login as a System event
@@ -850,6 +852,7 @@ export class AuthService {
       deletionRequestedAt: user.deletionRequestedAt || null,
       services: user.services || [],
       criminalRecordUrl: user.criminalRecordUrl || null,
+      accountStatus: user.accountStatus,
     };
 
     return {
