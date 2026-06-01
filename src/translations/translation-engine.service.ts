@@ -165,9 +165,26 @@ export class TranslationEngineService implements OnModuleInit {
         texts,
         target_lang: targetLang,
         source_lang: 'auto',
-      });
+      }, { timeout: 15000 });
 
-      return response.data.translated_texts || [];
+      const translatedTexts: string[] = response.data.translated_texts || [];
+
+      // Validate: reject error page content that leaked as "translations"
+      return translatedTexts.map((translated, i) => {
+        if (
+          typeof translated !== 'string' ||
+          translated.includes('Error 500') ||
+          translated.includes('Server Error') ||
+          translated.includes("That's an error") ||
+          translated.includes("That's all we know") ||
+          translated.includes('<!DOCTYPE') ||
+          translated.includes('<html')
+        ) {
+          console.warn(`[Translation] Rejected bad translation for: "${texts[i]?.substring(0, 40)}..."`);
+          return texts[i]; // Return original text as fallback
+        }
+        return translated;
+      });
     } catch (err) {
       console.error('[Chunk Translation Error]:', err.message);
       return texts;

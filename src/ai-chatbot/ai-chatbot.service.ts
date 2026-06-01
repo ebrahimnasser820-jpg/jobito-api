@@ -23,16 +23,14 @@ export class AiChatbotService {
     try {
       this.logger.debug(`Streaming from Python AI for user ${userId}: ${message} (File: ${fileType})`);
       
-      // 1. Fetch history (DISABLED FOR TESTING)
+      // 1. Fetch history
       let history: { role: string; content: string }[] = [];
-      /*
       try {
         const conversation = await this.aiConversationModel.findOne({ userId }).exec();
         history = conversation ? conversation.messages.map(m => ({ role: m.role, content: m.content })) : [];
       } catch (e) {
         this.logger.warn(`MongoDB history fetch failed: ${e.message}`);
       }
-      */
 
       // 2. Call Python ChatBot with Streaming
       const response = await axios.post(this.pythonUrl as string, {
@@ -58,7 +56,7 @@ export class AiChatbotService {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '').trim();
             if (dataStr === '[DONE]') {
-              // await this.saveToMongo(userId, message, fullReply); // DISABLED FOR TESTING
+              await this.saveToMongo(userId, message, fullReply);
               res.write(`data: [DONE]\n\n`);
               res.end();
             } else {
