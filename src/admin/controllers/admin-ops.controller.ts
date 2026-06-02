@@ -76,7 +76,7 @@ export class AdminOpsController {
 
   @Post('content/review')
   async reviewContent(@CurrentUser() admin: any, @Body() dto: ReviewContentDto) {
-    return this.contentService.reviewContent(admin.adminId, dto.reportId, dto.action as 'delete' | 'dismiss');
+    return this.contentService.reviewContent(admin.adminId, dto.reportId, dto.action as 'delete' | 'dismiss', dto.notifyViolation);
   }
 
   // ─── Technical Support ───────────────────────────────────────
