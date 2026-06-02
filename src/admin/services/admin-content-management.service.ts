@@ -6,6 +6,7 @@ import { AdminAuthService } from './admin-auth.service.js';
 import { MailService } from '../../mail/mail.service.js';
 import { User } from '../../users/user.entity.js';
 import { Job } from '../../jobs/job.entity.js';
+import { Company } from '../../companies/company.entity.js';
 
 @Injectable()
 export class AdminContentManagementService {
@@ -16,6 +17,8 @@ export class AdminContentManagementService {
     private userRepo: Repository<User>,
     @InjectRepository(Job)
     private jobRepo: Repository<Job>,
+    @InjectRepository(Company)
+    private companyRepo: Repository<Company>,
     private adminAuthService: AdminAuthService,
     private mailService: MailService,
   ) {}
@@ -47,20 +50,41 @@ export class AdminContentManagementService {
     await this.adminAuthService.logActivity(adminId, action === 'delete' ? 'DELETE_CONTENT' : 'DISMISS_REPORT', 'Content', String(reportId), `${action === 'delete' ? 'Deleted' : 'Dismissed'} reported content from ${report.postOwnerName}`);
     
     if (action === 'delete' && report.contentType === 'job' && report.contentId) {
-      await this.jobRepo.delete(report.contentId);
+      try {
+        await this.jobRepo.query('DELETE FROM ptj.applications WHERE job_id = $1', [report.contentId]);
+        await this.jobRepo.delete(report.contentId);
+      } catch (err) {
+        console.error('Error deleting job or applications:', err);
+      }
     }
 
     if (notifyViolation && report.postOwnerId) {
       try {
-        const user = await this.userRepo.findOne({ where: { userId: report.postOwnerId } });
-        if (user && user.email) {
+        let emailAddress = null;
+        let ownerName = report.postOwnerName;
+
+        if (/^\d+$/.test(report.postOwnerId)) {
+          const company = await this.companyRepo.findOne({ where: { companyId: Number(report.postOwnerId) } });
+          if (company && company.contactEmail) {
+            emailAddress = company.contactEmail;
+            ownerName = company.name;
+          }
+        } else {
+          const user = await this.userRepo.findOne({ where: { userId: report.postOwnerId } });
+          if (user && user.email) {
+            emailAddress = user.email;
+            ownerName = user.fullName || ownerName;
+          }
+        }
+
+        if (emailAddress) {
           const emailBody = action === 'delete' 
             ? 'تم حذف وظيفتك لانتهاكها معايير الموقع. نرجو الالتزام بالقوانين لتجنب إيقاف حسابك.'
             : 'هذا إنذار بخصوص مخالفة معايير الموقع. يرجى الالتزام لتجنب إيقاف حسابك.';
             
           await this.mailService.sendModerationEmail(
-            user.email,
-            user.fullName || report.postOwnerName,
+            emailAddress,
+            ownerName,
             emailBody,
             'WARNING'
           );
