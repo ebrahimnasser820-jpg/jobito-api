@@ -43,7 +43,7 @@ const storage = diskStorage({
 });
 
 const fileFilterConfig = (_req: any, file: any, cb: any) => {
-  if (!file.mimetype.match(/\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document|jpg|jpeg|png)$/)) {
+  if (!file.mimetype.match(/\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document|jpg|jpeg|png|heic|heif|webp)$/i)) {
     return cb(new BadRequestException('Only PDF, Word, or Image documents are allowed'), false);
   }
   cb(null, true);
@@ -71,7 +71,7 @@ export class AuthController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB limit for PDFs
+          new MaxFileSizeValidator({ maxSize: 25 * 1024 * 1024 }), // 25MB limit for images/PDFs
         ],
       }),
     )
