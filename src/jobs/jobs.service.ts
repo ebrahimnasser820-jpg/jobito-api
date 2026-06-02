@@ -209,9 +209,28 @@ export class JobsService {
       qb.orderBy('job.updatedAt', 'DESC');
       
       if (filters.location) {
-        qb.andWhere('LOWER(job.address) LIKE LOWER(:location)', { 
-          location: `%${filters.location}%` 
+        const locLower = filters.location.toLowerCase();
+        const map: Record<string, string[]> = {
+          cairo: ["القاهرة"], alexandria: ["الإسكندرية", "الاسكندرية"], giza: ["الجيزة"], qalyubia: ["القليوبية"],
+          "port said": ["بورسعيد"], suez: ["السويس"], gharbia: ["الغربية"], dakahlia: ["الدقهلية"],
+          ismailia: ["الإسماعيلية", "الاسماعيلية"], asyut: ["أسيوط", "اسيوط"], fayoum: ["الفيوم"],
+          minya: ["المنيا"], qena: ["قنا"], sohag: ["سوهاج"], "beni suef": ["بني سويف"],
+          aswan: ["أسوان", "اسوان"], "red sea": ["البحر الأحمر", "البحر الاحمر"],
+          "new valley": ["الوادي الجديد"], matrouh: ["مطروح"], "north sinai": ["شمال سيناء"],
+          "south sinai": ["جنوب سيناء"], "kafr el sheikh": ["كفر الشيخ"], beheira: ["البحيرة"],
+          damietta: ["دمياط"], sharqia: ["الشرقية"], monufia: ["المنوفية"], luxor: ["الأقصر", "الاقصر"]
+        };
+        const arNames = map[locLower] || [];
+        
+        let locationConditions = '(LOWER(job.address) LIKE LOWER(:loc) OR LOWER(company.address) LIKE LOWER(:loc))';
+        const params: Record<string, any> = { loc: `%${locLower}%` };
+        
+        arNames.forEach((name, idx) => {
+          locationConditions += ` OR LOWER(job.address) LIKE LOWER(:arName${idx}) OR LOWER(company.address) LIKE LOWER(:arName${idx})`;
+          params[`arName${idx}`] = `%${name}%`;
         });
+        
+        qb.andWhere(`(${locationConditions})`, params);
       }
 
       if (filters.jobType) {
