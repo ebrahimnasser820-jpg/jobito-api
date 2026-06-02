@@ -165,7 +165,7 @@ export class TranslationEngineService implements OnModuleInit {
         texts,
         target_lang: targetLang,
         source_lang: 'auto',
-      }, { timeout: 15000 });
+      }, { timeout: 3000 });
 
       const translatedTexts: string[] = response.data.translated_texts || [];
 
