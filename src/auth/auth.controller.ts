@@ -26,8 +26,16 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 
+import * as fs from 'fs';
+
 const storage = diskStorage({
-  destination: './uploads/documents',
+  destination: (_req, file, cb) => {
+    const dir = './uploads/documents';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
   filename: (_req, file, cb) => {
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
     cb(null, uniqueName);
