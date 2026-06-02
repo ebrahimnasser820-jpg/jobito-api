@@ -43,14 +43,14 @@ export class AdminContentManagementService {
     await this.reportedContentRepo.save(report);
     await this.adminAuthService.logActivity(adminId, action === 'delete' ? 'DELETE_CONTENT' : 'DISMISS_REPORT', 'Content', String(reportId), `${action === 'delete' ? 'Deleted' : 'Dismissed'} reported content from ${report.postOwnerName}`);
     
-    if (action === 'delete' && notifyViolation && report.postOwnerId) {
+    if (notifyViolation && report.postOwnerId) {
       try {
         const user = await this.userRepo.findOne({ where: { userId: report.postOwnerId } });
         if (user && user.email) {
           await this.mailService.sendModerationEmail(
             user.email,
             user.fullName || report.postOwnerName,
-            'تم حذف محتواك من قبل الإدارة لانتهاك معايير الموقع.',
+            'هذا إنذار بخصوص مخالفة معايير الموقع. يرجى الالتزام لتجنب إيقاف حسابك.',
             'WARNING'
           );
         }
