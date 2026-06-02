@@ -5,6 +5,7 @@ import { ReportedContent } from '../entities/reported-content.entity.js';
 import { AdminAuthService } from './admin-auth.service.js';
 import { MailService } from '../../mail/mail.service.js';
 import { User } from '../../users/user.entity.js';
+import { Job } from '../../jobs/job.entity.js';
 
 @Injectable()
 export class AdminContentManagementService {
@@ -13,6 +14,8 @@ export class AdminContentManagementService {
     private reportedContentRepo: Repository<ReportedContent>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(Job)
+    private jobRepo: Repository<Job>,
     private adminAuthService: AdminAuthService,
     private mailService: MailService,
   ) {}
@@ -43,14 +46,22 @@ export class AdminContentManagementService {
     await this.reportedContentRepo.save(report);
     await this.adminAuthService.logActivity(adminId, action === 'delete' ? 'DELETE_CONTENT' : 'DISMISS_REPORT', 'Content', String(reportId), `${action === 'delete' ? 'Deleted' : 'Dismissed'} reported content from ${report.postOwnerName}`);
     
+    if (action === 'delete' && report.contentType === 'job' && report.contentId) {
+      await this.jobRepo.delete(report.contentId);
+    }
+
     if (notifyViolation && report.postOwnerId) {
       try {
         const user = await this.userRepo.findOne({ where: { userId: report.postOwnerId } });
         if (user && user.email) {
+          const emailBody = action === 'delete' 
+            ? 'تم حذف وظيفتك لانتهاكها معايير الموقع. نرجو الالتزام بالقوانين لتجنب إيقاف حسابك.'
+            : 'هذا إنذار بخصوص مخالفة معايير الموقع. يرجى الالتزام لتجنب إيقاف حسابك.';
+            
           await this.mailService.sendModerationEmail(
             user.email,
             user.fullName || report.postOwnerName,
-            'هذا إنذار بخصوص مخالفة معايير الموقع. يرجى الالتزام لتجنب إيقاف حسابك.',
+            emailBody,
             'WARNING'
           );
         }
