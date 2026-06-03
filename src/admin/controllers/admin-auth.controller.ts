@@ -36,14 +36,14 @@ export class AdminAuthController {
   @Get('dashboard/stats')
   @Get('sys/dashboard') // Alias for the book
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
-  @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRole.SUPER_ADMIN, AdminRole.OPERATION_MANAGER)
   async getSystemStats() {
     return this.dashboardService.getSystemStats();
   }
 
   @Get('dashboard/charts')
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
-  @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRole.SUPER_ADMIN, AdminRole.OPERATION_MANAGER)
   async getWeeklyChartData() {
     return this.dashboardService.getWeeklyChartData();
   }
@@ -52,14 +52,14 @@ export class AdminAuthController {
 
   @Get('maintenance')
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
-  @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRole.SUPER_ADMIN, AdminRole.OPERATION_MANAGER)
   async getMaintenanceStatus() {
     return this.dashboardService.getMaintenanceStatus();
   }
 
   @Patch('maintenance')
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
-  @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRole.SUPER_ADMIN, AdminRole.OPERATION_MANAGER)
   async toggleMaintenance(@CurrentUser() admin: any, @Body('enabled') enabled: boolean) {
     return this.dashboardService.setMaintenanceMode(enabled, admin.adminId);
   }
@@ -68,7 +68,7 @@ export class AdminAuthController {
 
   @Post('invite')
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
-  @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRole.SUPER_ADMIN, AdminRole.OPERATION_MANAGER)
   async inviteAdmin(@CurrentUser() admin: any, @Body() dto: InviteAdminDto) {
     return this.authService.inviteAdmin(admin.adminId, dto.fullName, dto.email, AdminRole.OPERATION_MANAGER, dto.password);
   }
