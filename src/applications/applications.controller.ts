@@ -30,7 +30,7 @@ export class ApplicationsController {
 
   @Post()
   @UseGuards(RolesGuard, AccountDeletionGuard)
-  @Roles('student')
+  @Roles('student', 'tradesman')
   apply(
     @Body('job_id') jobId: number,
     @Body('portfolioUrl') portfolioUrl: string,
@@ -44,7 +44,7 @@ export class ApplicationsController {
 
   @Get('my')
   @UseGuards(RolesGuard)
-  @Roles('student')
+  @Roles('student', 'tradesman')
   getMyApplications(@CurrentUser() user: RequestUser) {
     return this.applicationsService.getMyApplications(user.sub);
   }
@@ -77,7 +77,7 @@ export class ApplicationsController {
 
   @Get(':id')
   @UseGuards(RolesGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'tradesman')
   async getApplication(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: RequestUser,
@@ -93,7 +93,7 @@ export class ApplicationsController {
   @Patch(':id/status')
   @Post(':id/status') // Support both for robustness
   @UseGuards(RolesGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'tradesman')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,
@@ -105,7 +105,7 @@ export class ApplicationsController {
 
   @Get('status/:jobId')
   @UseGuards(RolesGuard)
-  @Roles('student')
+  @Roles('student', 'tradesman')
   async getStatusByJob(
     @Param('jobId', ParseIntPipe) jobId: number,
     @CurrentUser() user: RequestUser,
@@ -117,7 +117,7 @@ export class ApplicationsController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'tradesman')
   deleteApplication(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: RequestUser,
