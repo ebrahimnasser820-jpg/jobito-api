@@ -15,7 +15,7 @@ export class AlertsService {
     if (report.severity === Severity.HIGH || report.frequency > 20) {
       this.logger.warn(`🚨 HIGH SEVERITY ALERT: ${report.errorType}`);
       
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@jobito.com';
+      const adminEmail = process.env.ADMIN_EMAIL || 'saif1012816@gmail.com';
       const subject = `[Jobito Monitoring] HIGH SEVERITY: ${report.errorType}`;
       
       const htmlContent = `

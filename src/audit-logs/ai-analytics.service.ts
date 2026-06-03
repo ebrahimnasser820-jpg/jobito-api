@@ -173,7 +173,7 @@ export class AiAnalyticsService {
 
   // ─── 5. Generate & Send Full Report via Email ──────────────
   async generateAndSendReport(days = 7): Promise<{ success: boolean; message: string }> {
-    const adminEmail = process.env.MAIL_USER || 'mohamednasseremam380@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'saif1012816@gmail.com';
 
     const [topSearches, topCompanies, topJobs, traffic] = await Promise.all([
       this.getTopSearches(days),

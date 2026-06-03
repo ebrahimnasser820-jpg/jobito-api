@@ -77,7 +77,7 @@ export class AiMonitoringService {
   }
 
   private async sendAiAlert(data: { reason: string; details: any }) {
-    const adminEmail = process.env.MAIL_USER || 'mohamednasseremam380@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'saif1012816@gmail.com';
     const html = `
       <div style="font-family: sans-serif; border: 2px solid #dc2626; padding: 20px; border-radius: 8px;">
         <h2 style="color: #dc2626;">🚨 AI Security Alert</h2>
