@@ -45,6 +45,11 @@ export class AdminOpsController {
     return this.userMgmtService.executeUserAction(admin.adminId, dto.targetUserId, dto.actionType, dto.reason);
   }
 
+  @Patch('users/:id')
+  async executeUserActionPatch(@CurrentUser() admin: any, @Param('id') id: string, @Body() body: { actionType: string, reason?: string }) {
+    return this.userMgmtService.executeUserAction(admin.adminId, id, body.actionType as any, body.reason);
+  }
+
   // ─── Company Review ──────────────────────────────────────────
   @Get('companies/pending')
   async getPendingCompanies() {
@@ -60,6 +65,11 @@ export class AdminOpsController {
   @Post('companies/review')
   async reviewCompany(@CurrentUser() admin: any, @Body() dto: ReviewCompanyDto) {
     return this.companyReviewService.reviewCompany(admin.adminId, dto.companyId, dto.action as 'approve' | 'reject', dto.rejectionReason);
+  }
+
+  @Patch('companies/:id')
+  async reviewCompanyPatch(@CurrentUser() admin: any, @Param('id') id: string, @Body() body: { action: 'approve' | 'reject', rejectionReason?: string }) {
+    return this.companyReviewService.reviewCompany(admin.adminId, parseInt(id), body.action, body.rejectionReason);
   }
 
   @Get('companies')
@@ -81,6 +91,7 @@ export class AdminOpsController {
 
   // ─── Technical Support ───────────────────────────────────────
   @Get('support/tickets')
+  @Get('support') // Alias
   async listTickets(@Query('status') status?: string) {
     return this.supportService.listTickets(status);
   }

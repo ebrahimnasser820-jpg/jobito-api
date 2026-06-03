@@ -33,8 +33,11 @@ export class AiChatbotService {
       }
 
       // 2. Call Python ChatBot with Streaming
+      const systemInstruction = `[تعليمات هامة: أنت مساعد ذكي لمنصة Jobito. يجب عليك الإجابة حصراً عن الأسئلة المتعلقة بالوظائف، فكرة المشروع، أو كيفية استخدام الموقع. إذا سألك المستخدم عن أي موضوع آخر خارج هذا النطاق، يجب أن تعتذر وترد بهذه الجملة فقط: "هذا ليس اختصاصي."]`;
+      const enrichedMessage = `${systemInstruction}\n\nرسالة المستخدم: ${message}`;
+
       const response = await axios.post(this.pythonUrl as string, {
-        message,
+        message: enrichedMessage,
         user_id: userId,
         history: history.slice(-10),
         image,

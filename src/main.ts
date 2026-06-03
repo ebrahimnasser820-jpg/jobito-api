@@ -18,7 +18,23 @@ async function bootstrap() {
     logger: WinstonModule.createLogger(winstonConfig),
   });
 
+  // Set global prefix
+  app.setGlobalPrefix('api');
 
+  // URL rewrite middleware for backward compatibility
+  app.use((req: any, res: any, next: any) => {
+    const url = req.url;
+    // If the request doesn't start with /api/ and is not for /uploads/, prepend /api
+    if (
+      !url.startsWith('/api/') &&
+      !url.startsWith('/uploads/') &&
+      url !== '/api' &&
+      url !== '/uploads'
+    ) {
+      req.url = `/api${url}`;
+    }
+    next();
+  });
 
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',

@@ -89,6 +89,7 @@ export class ApplicationsController {
     return app;
   }
 
+  @Patch(':id')
   @Patch(':id/status')
   @Post(':id/status') // Support both for robustness
   @UseGuards(RolesGuard)

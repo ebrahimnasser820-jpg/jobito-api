@@ -122,12 +122,12 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
   async processExpiredDeletions() {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
 
     const expiredUsers = await this.usersRepository.find({
       where: {
-        deletionRequestedAt: LessThan(sevenDaysAgo),
+        deletionRequestedAt: LessThan(fifteenDaysAgo),
         isActive: true,
       },
     });

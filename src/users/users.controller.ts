@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Patch, Delete, Body, UseGuards, Request, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Delete, Body, UseGuards, Request, BadRequestException, Inject, forwardRef, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { AccountDeletionGuard } from '../common/guards/account-deletion.guard.js';
 import { UsersService } from './users.service.js';
@@ -172,10 +172,10 @@ export class UsersController {
         });
 
         const deleteDate = new Date();
-        deleteDate.setDate(deleteDate.getDate() + 7);
+        deleteDate.setDate(deleteDate.getDate() + 15);
 
         return {
-            message: 'Account scheduled for deletion. You have 7 days to cancel.',
+            message: 'Account scheduled for deletion. You have 15 days to cancel.',
             deletionRequestedAt: new Date(),
             permanentDeleteAt: deleteDate,
         };
@@ -212,7 +212,7 @@ export class UsersController {
         }
 
         const deleteDate = new Date(user.deletionRequestedAt);
-        deleteDate.setDate(deleteDate.getDate() + 7);
+        deleteDate.setDate(deleteDate.getDate() + 15);
         const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
         return {
@@ -220,6 +220,19 @@ export class UsersController {
             deletionRequestedAt: user.deletionRequestedAt,
             permanentDeleteAt: deleteDate,
             daysLeft,
+        };
+    }
+
+    @Get(':id')
+    async getPublicProfile(@Param('id') id: string) {
+        const user = await this.usersService.findById(id);
+        if (!user) throw new BadRequestException('User not found');
+        
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { passwordHash, verificationCode, resetCode, googleId, applications, applicantProfile, ...publicData } = user as any;
+        return {
+            ...publicData,
+            ...(applicantProfile || {})
         };
     }
 }

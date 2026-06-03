@@ -35,6 +35,8 @@ import { RatingsModule } from './ratings/ratings.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { TranslationsModule } from './translations/translations.module.js';
 import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
+import { ServiceRequestsModule } from './service-requests/service-requests.module.js';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -81,6 +83,7 @@ import { AutoTranslationInterceptor } from './translations/auto-translation.inte
     RatingsModule,
     AdminModule,
     TranslationsModule,
+    ServiceRequestsModule,
   ],
   controllers: [AppController],
   providers: [

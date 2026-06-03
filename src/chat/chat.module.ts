@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatService } from './chat.service.js';
 import { MediaService } from './media.service.js';
 import { ChatController } from './chat.controller.js';
+import { ConversationsController } from './conversations.controller.js';
 import { ChatMessage } from './chat-message.entity.js';
 
 import { JobsModule } from '../jobs/jobs.module.js';
@@ -16,7 +17,7 @@ import { UsersModule } from '../users/users.module.js';
         NotificationsModule,
         UsersModule,
     ],
-    controllers: [ChatController],
+    controllers: [ChatController, ConversationsController],
     providers: [ChatService, MediaService],
     exports: [ChatService, MediaService],
 })

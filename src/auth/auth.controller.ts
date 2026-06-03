@@ -59,6 +59,12 @@ export class AuthController {
     return this.authService.refreshUserToken(req.user.sub);
   }
 
+  @Post('refresh')
+  @UseGuards(JwtAuthGuard)
+  async refresh(@Req() req: any) {
+    return this.authService.refreshUserToken(req.user.sub);
+  }
+
 
   @Post('register')
   register(@Body() body: RegisterDto) {
@@ -90,6 +96,11 @@ export class AuthController {
 
   @Post('verify-email')
   verifyEmail(@Body() body: VerifyEmailDto) {
+    return this.authService.verifyEmail(body.email, body.code);
+  }
+
+  @Post('verify-otp')
+  verifyOtp(@Body() body: VerifyEmailDto) {
     return this.authService.verifyEmail(body.email, body.code);
   }
 

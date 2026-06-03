@@ -34,6 +34,7 @@ export class AdminAuthController {
   // ─── Super Admin: Dashboard ──────────────────────────────────
 
   @Get('dashboard/stats')
+  @Get('sys/dashboard') // Alias for the book
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
   @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
   async getSystemStats() {
@@ -88,6 +89,7 @@ export class AdminAuthController {
   // ─── Super Admin: Activity Log ────────────────────────────────
 
   @Get('activity-log')
+  @Get('sys/activity-log') // Alias for the book
   @UseGuards(AdminJwtAuthGuard, AdminRolesGuard)
   @AdminRolesAllowed(AdminRole.SUPER_ADMIN)
   async getActivityLog(@Query('page') page?: string, @Query('limit') limit?: string) {
