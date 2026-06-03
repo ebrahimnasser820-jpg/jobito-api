@@ -1,4 +1,5 @@
 import { Injectable, Logger, InternalServerErrorException, Inject, Res } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, Observable } from 'rxjs';
 import { LogsService } from '../monitoring/services/logs.service.js';
@@ -17,6 +18,7 @@ export class AiChatbotService {
     private readonly httpService: HttpService,
     private readonly logsService: LogsService,
     @InjectModel(AiConversation.name) private aiConversationModel: Model<AiConversation>,
+    private dataSource: DataSource,
   ) {}
 
   async getChatResponse(message: string, userId: string = 'guest', res: Response, image?: string, fileType?: string) {
@@ -32,8 +34,38 @@ export class AiChatbotService {
         this.logger.warn(`MongoDB history fetch failed: ${e.message}`);
       }
 
+      // 1.5 Extract Dynamic DB Schemas
+      let dynamicDbRules = '';
+      try {
+        const userMeta = this.dataSource.getMetadata('User');
+        const userFields = userMeta.columns.map(c => `${c.propertyName} (${c.type})`).join(', ');
+
+        const companyMeta = this.dataSource.getMetadata('Company');
+        const companyFields = companyMeta.columns.map(c => `${c.propertyName} (${c.type})`).join(', ');
+
+        const jobMeta = this.dataSource.getMetadata('Job');
+        const jobFields = jobMeta.columns.map(c => `${c.propertyName} (${c.type})`).join(', ');
+
+        dynamicDbRules = `
+[هيكل البيانات الفعلي في النظام - Database Schemas]
+استخدم هذه الحقول لتخبر المستخدم بما يجب عليه ملؤه بدقة:
+- البيانات المطلوبة لتسجيل مستخدم (User Table): ${userFields}
+- البيانات المطلوبة لتسجيل شركة (Company Table): ${companyFields}
+- البيانات المطلوبة لنشر وظيفة (Job Table): ${jobFields}
+`;
+      } catch (err) {
+        this.logger.warn(`Failed to extract DB metadata: ${err.message}`);
+      }
+
       // 2. Call Python ChatBot with Streaming
-      const systemInstruction = `[تعليمات هامة: أنت مساعد ذكي لمنصة Jobito. يجب عليك الإجابة حصراً عن الأسئلة المتعلقة بالوظائف، فكرة المشروع، أو كيفية استخدام الموقع. إذا سألك المستخدم عن أي موضوع آخر خارج هذا النطاق، يجب أن تعتذر وترد بهذه الجملة فقط: "هذا ليس اختصاصي."]`;
+      const systemInstruction = `[تعليمات هامة: أنت مساعد ذكي لمنصة Jobito (منصة العمل الجزئي الذكية). 
+يجب عليك الإجابة حصراً عن الأسئلة المتعلقة بالوظائف، فكرة المشروع، كيفية استخدام الموقع، أو شروط التسجيل.
+معلومات هامة عن المنصة لمساعدتك في الإجابة:
+1. الباحث عن عمل (Job Seeker): يحتاج للتسجيل بالبريد الإلكتروني وتفعيله عبر رمز OTP.
+2. مقدم الخدمة (Tradesman): يحتاج للتسجيل بالبريد وتفعيله عبر OTP، ولتفعيل حسابه بالكامل يجب عليه رفع الفيش والتشبيه (صحيفة الحالة الجنائية)، وسيتم مراجعته من قبل الإدارة.
+3. الشركة (Company): تحتاج للتسجيل بالبريد وتفعيله عبر OTP، ولن يتم تفعيل الحساب إلا بعد رفع السجل التجاري (Commercial Register) والبطاقة الضريبية (Tax ID) ومراجعتها.
+إذا سألك المستخدم عن أي موضوع آخر خارج هذا النطاق، يجب أن تعتذر وترد بهذه الجملة فقط: "هذا ليس اختصاصي."]
+${dynamicDbRules}`;
       const enrichedMessage = `${systemInstruction}\n\nرسالة المستخدم: ${message}`;
 
       const response = await axios.post(this.pythonUrl as string, {
