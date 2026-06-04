@@ -15,8 +15,17 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return "API is working"', () => {
+      expect(appController.getRoot()).toEqual({ message: 'API is working' });
+    });
+  });
+
+  describe('config', () => {
+    it('should return public config', () => {
+      process.env.GOOGLE_CLIENT_ID = 'test-client-id';
+      expect(appController.getPublicConfig()).toEqual({
+        GOOGLE_CLIENT_ID: 'test-client-id',
+      });
     });
   });
 });

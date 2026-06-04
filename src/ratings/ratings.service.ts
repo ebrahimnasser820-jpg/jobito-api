@@ -10,12 +10,22 @@ export class RatingsService {
     private readonly ratingsRepository: Repository<Rating>,
   ) {}
 
-  async create(dto: { companyId?: number; targetUserId?: string; targetCompanyId?: number; ratingValue: number; comment?: string; raterType?: string }, currentUserId: string) {
+  async create(
+    dto: {
+      companyId?: number;
+      targetUserId?: string;
+      targetCompanyId?: number;
+      ratingValue: number;
+      comment?: string;
+      raterType?: string;
+    },
+    currentUserId: string,
+  ) {
     const isCompanyRater = dto.raterType === 'COMPANY';
-    
+
     // In our system, if raterType is COMPANY, we might need to find their companyId if not provided
     // For now, we assume the frontend sends the IDs correctly or we'd need a Company service here.
-    
+
     const ratingData: any = {
       raterUserId: !isCompanyRater ? currentUserId : null,
       raterCompanyId: isCompanyRater ? dto.companyId : null,
@@ -25,10 +35,9 @@ export class RatingsService {
       comment: dto.comment,
       raterType: dto.raterType || 'USER',
     };
-    
+
     const rating = this.ratingsRepository.create(ratingData as Rating);
     return this.ratingsRepository.save(rating);
-
   }
 
   async findByCompanyId(targetCompanyId: number) {
@@ -81,4 +90,3 @@ export class RatingsService {
     return parseFloat(result?.avg || '0');
   }
 }
-

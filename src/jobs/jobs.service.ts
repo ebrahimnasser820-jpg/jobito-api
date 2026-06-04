@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Brackets, MoreThan } from 'typeorm';
+import { Repository, DataSource, Brackets, MoreThan, Not } from 'typeorm';
 import { Job } from './job.entity.js';
 import { Category } from './category.entity.js';
 import { CreateJobDto } from './dto/create-job.dto.js';
@@ -476,12 +476,19 @@ export class JobsService {
       .find({
         where: {
           ...(job.categoryId && { categoryId: job.categoryId }),
+          ...(job.jobType && { jobType: job.jobType }),
+          ...(job.classification && { classification: job.classification }),
+          ...(job.companyId && { companyId: Not(job.companyId) }),
+          ...(job.userId && { userId: Not(job.userId) }),
           isActive: true,
         },
-      relations: ['company', 'category', 'user', 'categories'],
-        take: 4,
+        relations: ['company', 'category', 'user', 'categories'],
+        take: 5,
       })
-      .then((jobs) => jobs.filter((j) => Number(j.jobId) !== id));
+      .then((jobs) => {
+        const filtered = jobs.filter((j) => Number(j.jobId) !== id);
+        return filtered.slice(0, 4);
+      });
   }
 
   async getApplicationCount(jobId: number): Promise<number> {
