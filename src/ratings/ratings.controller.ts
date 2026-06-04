@@ -8,13 +8,18 @@ export class RatingsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() createRatingDto: { companyId: number; targetUserId?: string; ratingValue: number; comment?: string; raterType?: string }, @Request() req) {
+  create(@Body() createRatingDto: { companyId?: number; targetUserId?: string; jobId?: number; ratingValue: number; comment?: string; raterType?: string }, @Request() req) {
     return this.ratingsService.create(createRatingDto, req.user.userId);
   }
 
   @Get('company/:companyId')
   findByCompanyId(@Param('companyId') companyId: number) {
     return this.ratingsService.findByCompanyId(companyId);
+  }
+
+  @Get('job/:jobId')
+  findByJobId(@Param('jobId') jobId: number) {
+    return this.ratingsService.findByJobId(jobId);
   }
 
   @Get('user/:userId')

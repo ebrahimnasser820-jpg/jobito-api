@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import { Company } from '../companies/company.entity.js';
+import { Job } from '../jobs/job.entity.js';
 
 @Entity({ schema: 'ptj', name: 'ratings' })
 export class Rating {
@@ -53,5 +54,11 @@ export class Rating {
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'target_company_id' })
   targetCompany: Company;
-}
 
+  @Column({ name: 'job_id', type: 'bigint', nullable: true })
+  jobId: number;
+
+  @ManyToOne(() => Job)
+  @JoinColumn({ name: 'job_id' })
+  job: Job;
+}
