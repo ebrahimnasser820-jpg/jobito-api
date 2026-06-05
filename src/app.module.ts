@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -11,6 +11,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './database/typeorm.config.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { winstonConfig } from './common/configs/logger.config.js';
+import { MaintenanceMiddleware } from './common/middlewares/maintenance.middleware.js';
 
 // Feature Modules
 import { AuthModule } from './auth/auth.module.js';
@@ -98,4 +99,10 @@ import { ServiceRequestsModule } from './service-requests/service-requests.modul
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(MaintenanceMiddleware)
+      .forRoutes('*');
+  }
+}
