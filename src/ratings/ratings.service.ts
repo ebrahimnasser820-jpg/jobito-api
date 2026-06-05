@@ -40,16 +40,22 @@ export class RatingsService {
           userId: dto.targetUserId,
           status: In(['hired', 'accepted']),
         },
+        relations: ['job'],
         order: { appliedAt: 'DESC' },
       });
 
       if (hiredApp) {
+        const isTradesmanJob = hiredApp.job?.classification === 'tradesman_work' || hiredApp.job?.classification === 'tradesman';
+        const waitDays = isTradesmanJob ? 1 : 7;
+        const waitMs = waitDays * 24 * 60 * 60 * 1000;
+        
         const hiringDate = new Date(hiredApp.appliedAt).getTime();
-        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();
-        if (now < hiringDate + sevenDaysInMs) {
-          const daysLeft = Math.ceil((hiringDate + sevenDaysInMs - now) / (1000 * 60 * 60 * 24));
-          throw new BadRequestException(`لا يمكن التقييم قبل مرور 7 أيام من التوظيف. متبقي ${daysLeft} أيام.`);
+        if (now < hiringDate + waitMs) {
+          const daysLeft = Math.ceil((hiringDate + waitMs - now) / (1000 * 60 * 60 * 24));
+          const daysWordWait = waitDays === 1 ? 'يوم' : 'أيام';
+          const daysWordLeft = daysLeft === 1 ? 'يوم' : 'أيام';
+          throw new BadRequestException(`لا يمكن التقييم قبل مرور ${waitDays} ${daysWordWait} من التوظيف. متبقي ${daysLeft} ${daysWordLeft}.`);
         }
       }
     }
