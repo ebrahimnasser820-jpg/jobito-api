@@ -182,20 +182,18 @@ export class AdminDashboardService {
     startOfDay.setHours(0, 0, 0, 0);
     const todayCount = await this.activityLogRepo.count();
 
-    // Actions in last 24h specifically
-    const last24hActions = await this.dataSource.query(
+    // Actions for all time instead of just last 24h
+    const allTimeActions = await this.dataSource.query(
       `SELECT action_type, COUNT(*) as count
        FROM ptj.admin_activity_logs
-       WHERE created_at >= $1
        GROUP BY action_type
-       ORDER BY count DESC`,
-      [last24h],
+       ORDER BY count DESC`
     );
 
     return {
       hourly: hourlyActivity,       // [{hour, count}]
       totalActions: todayCount,
-      actionBreakdown: last24hActions,
+      actionBreakdown: allTimeActions,
     };
   }
 
