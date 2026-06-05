@@ -301,7 +301,7 @@ export class MailService {
             Hello <b>${name}</b>,
           </p>
           <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
-            We're writing to confirm that your Jobito account has been permanently deleted, as requested 15 days ago. 
+            We're writing to confirm that your Jobito account has been permanently deleted, as requested 2 days ago. 
             All of your personal data and associated records have been removed from our active systems.
           </p>
 

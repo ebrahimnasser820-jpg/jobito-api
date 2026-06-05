@@ -166,16 +166,16 @@ export class UsersController {
             return { message: 'Account deletion already scheduled', deletionRequestedAt: user.deletionRequestedAt };
         }
 
-        // Schedule deletion in 7 days — don't deactivate yet
+        // Schedule deletion in 2 days — don't deactivate yet
         await this.usersService.update(userId, {
             deletionRequestedAt: new Date(),
         });
 
         const deleteDate = new Date();
-        deleteDate.setDate(deleteDate.getDate() + 15);
+        deleteDate.setDate(deleteDate.getDate() + 2);
 
         return {
-            message: 'Account scheduled for deletion. You have 15 days to cancel.',
+            message: 'Account scheduled for deletion. You have 2 days to cancel.',
             deletionRequestedAt: new Date(),
             permanentDeleteAt: deleteDate,
         };
@@ -212,7 +212,7 @@ export class UsersController {
         }
 
         const deleteDate = new Date(user.deletionRequestedAt);
-        deleteDate.setDate(deleteDate.getDate() + 15);
+        deleteDate.setDate(deleteDate.getDate() + 2);
         const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
         return {

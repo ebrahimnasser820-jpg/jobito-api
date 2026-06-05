@@ -30,8 +30,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
-    // 3. Check if account is completely deactivated (after 15 days)
-    if (!user.isActive) {
+    // 3. Check if account is completely deactivated (after 2 days)
+    if (user.deletionRequestedAt && !user.isActive) {
       throw new UnauthorizedException('Account has been deactivated');
     }
 
