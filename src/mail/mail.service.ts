@@ -282,4 +282,39 @@ export class MailService {
       `,
     });
   }
+  /** Send account deletion confirmation email */
+  async sendAccountDeletedEmail(to: string, name: string): Promise<void> {
+    await this.send({
+      from: `"Jobito" <${this.fromEmail}>`,
+      to,
+      subject: 'Jobito — Account Deleted',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 40px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: #fee2e2; color: #ef4444; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; font-size: 32px; margin-bottom: 16px;">
+              🗑️
+            </div>
+            <h1 style="color: #111827; font-size: 22px; font-weight: 800; margin: 0;">Account Deleted</h1>
+          </div>
+          
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            Hello <b>${name}</b>,
+          </p>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            We're writing to confirm that your Jobito account has been permanently deleted, as requested 15 days ago. 
+            All of your personal data and associated records have been removed from our active systems.
+          </p>
+
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.5; margin-top: 32px;">
+            We're sorry to see you go! If you ever wish to return, you are always welcome to create a new account.
+          </p>
+          
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            Thank you for being part of Jobito.
+          </p>
+        </div>
+      `,
+    });
+  }
 }

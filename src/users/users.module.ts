@@ -9,13 +9,14 @@ import { UsersService } from './users.service.js';
 import { DeletionCleanupService } from './deletion-cleanup.service.js';
 import { MongoUserProfile, MongoUserProfileSchema } from './schemas/mongo-user-profile.schema.js';
 import { MongoUserProfileService } from './mongo-user-profile.service.js';
-// import { ChatModule } from '../chat/chat.module.js';
+import { MailModule } from '../mail/mail.module.js';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, ApplicantProfile]),
     MongooseModule.forFeature([{ name: MongoUserProfile.name, schema: MongoUserProfileSchema }]),
     forwardRef(() => AuthModule),
+    MailModule,
     // ChatModule,
   ],
   controllers: [UsersController],

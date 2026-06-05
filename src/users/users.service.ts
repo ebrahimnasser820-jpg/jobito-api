@@ -5,6 +5,7 @@ import { ApplicantProfile } from './applicant-profile.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AppGateway } from '../common/gateways/app.gateway.js';
 import { MongoUserProfileService } from './mongo-user-profile.service.js';
+import { MailService } from '../mail/mail.service.js';
 
 @Injectable()
 export class UsersService {
@@ -15,6 +16,7 @@ export class UsersService {
     private profileRepository: Repository<ApplicantProfile>,
     private readonly gateway: AppGateway,
     private mongoProfileService: MongoUserProfileService,
+    private mailService: MailService,
   ) { }
 
   findAll() {
@@ -138,6 +140,11 @@ export class UsersService {
 
     for (const user of expiredUsers) {
       try {
+        // Send email BEFORE anonymizing
+        if (user.email) {
+          await this.mailService.sendAccountDeletedEmail(user.email, user.fullName || 'User');
+        }
+
         // Soft delete strategy: deactivate and scrub PII
         await this.usersRepository.update(user.userId, {
           isActive: false,
