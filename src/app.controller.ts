@@ -18,4 +18,14 @@ export class AppController {
       maintenanceMode: AdminDashboardService.maintenanceMode,
     };
   }
+
+  @Get('maintenance-status')
+  getMaintenanceStatus() {
+    return {
+      maintenanceMode: AdminDashboardService.maintenanceMode,
+      message: AdminDashboardService.maintenanceMode
+        ? 'The system is currently undergoing maintenance. Please try again later.'
+        : 'System is operational.',
+    };
+  }
 }

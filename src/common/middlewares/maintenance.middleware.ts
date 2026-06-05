@@ -20,6 +20,7 @@ export class MaintenanceMiddleware implements NestMiddleware {
     '/admin',
     '/monitoring',
     '/push',
+    '/maintenance-status',
   ];
 
   use(req: Request, res: Response, next: NextFunction) {
