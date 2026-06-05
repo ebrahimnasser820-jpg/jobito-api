@@ -5,6 +5,7 @@ import { MediaService } from './media.service.js';
 import { ChatController } from './chat.controller.js';
 import { ConversationsController } from './conversations.controller.js';
 import { ChatMessage } from './chat-message.entity.js';
+import { Admin } from '../admin/entities/admin.entity.js';
 
 import { JobsModule } from '../jobs/jobs.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
@@ -12,7 +13,7 @@ import { UsersModule } from '../users/users.module.js';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([ChatMessage]),
+        TypeOrmModule.forFeature([ChatMessage, Admin]),
         JobsModule,
         NotificationsModule,
         UsersModule,

@@ -7,6 +7,7 @@ import { JobsService } from '../jobs/jobs.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PushService } from '../notifications/push.service.js';
 import { User } from '../users/user.entity.js';
+import { Admin } from '../admin/entities/admin.entity.js';
 
 @Injectable()
 export class ChatService {
@@ -15,6 +16,7 @@ export class ChatService {
     constructor(
         @InjectRepository(ChatMessage) private chatRepository: Repository<ChatMessage>,
         @InjectRepository(User) private usersRepository: Repository<User>,
+        @InjectRepository(Admin) private adminRepository: Repository<Admin>,
         private readonly gateway: AppGateway,
         private readonly jobsService: JobsService,
         private readonly notificationsService: NotificationsService,
@@ -191,6 +193,16 @@ export class ChatService {
             where: { userId: In(userIds) },
             select: ['userId', 'fullName', 'avatarUrl', 'email'],
         });
+    }
+
+    // ─── Get Support Staff (for regular users) ──────────────────────────
+    async getSupportStaff() {
+        const admins = await this.adminRepository.find({
+            where: { isActive: true },
+            select: ['adminId', 'fullName', 'email', 'role'],
+            order: { createdAt: 'ASC' },
+        });
+        return admins;
     }
 
     // AI/Bot Methods (Adapted from previous logic to keep AI working if needed)

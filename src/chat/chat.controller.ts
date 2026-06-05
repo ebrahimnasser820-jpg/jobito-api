@@ -121,6 +121,12 @@ export class ChatController {
         return this.chatService.searchUsers(query, currentUserId);
     }
 
+    // Get support staff list (accessible by all authenticated users)
+    @Get('support-staff')
+    async getSupportStaff() {
+        return this.chatService.getSupportStaff();
+    }
+
     // Get user info by ID (for chat display)
     @Get('user-info/:userId')
     async getUserInfo(@Param('userId') userId: string) {
