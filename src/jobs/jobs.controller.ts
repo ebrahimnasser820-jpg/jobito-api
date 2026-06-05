@@ -70,7 +70,7 @@ export class JobsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard, AccountDeletionGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'user')
   async create(@Body() dto: CreateJobDto, @Req() req: any) {
     const user = req.user as any;
 
@@ -105,7 +105,7 @@ export class JobsController {
 
   @Post('bulk')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'user')
   async createBulk(@Body() dto: CreateJobDto[], @Req() req: any) {
     const user = req.user as any;
 
@@ -134,7 +134,7 @@ export class JobsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, AccountDeletionGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'user')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateJobDto,
@@ -180,7 +180,7 @@ export class JobsController {
 
   @Get(':id/analytics')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'user')
   async getAnalytics(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     const user = req.user as any;
     const job = await this.jobsService.findOne(id);
@@ -207,7 +207,7 @@ export class JobsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, AccountDeletionGuard)
-  @Roles('company', 'student')
+  @Roles('company', 'student', 'user')
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     const user = req.user as any;
     const job = await this.jobsService.findOne(id);
