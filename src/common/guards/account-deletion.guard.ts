@@ -20,6 +20,7 @@ export class AccountDeletionGuard implements CanActivate {
       const isExempt = 
         (path.includes('/users/me/cancel-deletion') && method === 'PATCH') ||
         (path.includes('/users/me/deletion-status') && method === 'GET') ||
+        (path.includes('/users/me') && method === 'DELETE') ||
         (path.includes('/auth/logout') && method === 'POST');
 
       if (!isExempt) {
