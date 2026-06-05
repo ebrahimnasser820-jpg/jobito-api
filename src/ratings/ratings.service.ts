@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Rating } from './rating.entity.js';
 import { Application } from '../applications/application.entity.js';
+import { PushService } from '../notifications/push.service.js';
+import { CompaniesService } from '../companies/companies.service.js';
+import { UsersService } from '../users/users.service.js';
 
 @Injectable()
 export class RatingsService {
@@ -11,6 +14,9 @@ export class RatingsService {
     private readonly ratingsRepository: Repository<Rating>,
     @InjectRepository(Application)
     private readonly applicationRepository: Repository<Application>,
+    private readonly pushService: PushService,
+    private readonly companiesService: CompaniesService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(
@@ -60,7 +66,42 @@ export class RatingsService {
     };
 
     const rating = this.ratingsRepository.create(ratingData as Rating);
-    return this.ratingsRepository.save(rating);
+    const savedRating = await this.ratingsRepository.save(rating);
+
+    // Send FCM notification
+    try {
+      if (isCompanyRater && dto.targetUserId) {
+        // Company rated a User
+        const company = await this.companiesService.findOne(dto.companyId);
+        const companyName = company ? company.name : 'شركة';
+        await this.pushService.sendPushToUser(
+          dto.targetUserId,
+          'تقييم جديد',
+          `قامت ${companyName} بتقييمك ${dto.ratingValue} نجوم`,
+          { type: 'NEW_RATING', ratingId: savedRating.ratingId.toString() }
+        );
+      } else if (!isCompanyRater && dto.targetCompanyId) {
+        // User rated a Company
+        const company = await this.companiesService.findOne(dto.targetCompanyId);
+        if (company && company.contactEmail) {
+          const companyOwner = await this.usersService.findByEmail(company.contactEmail);
+          if (companyOwner) {
+            const user = await this.usersService.findById(currentUserId);
+            const userName = user ? user.fullName : 'أحد المستخدمين';
+            await this.pushService.sendPushToUser(
+              companyOwner.userId,
+              'تقييم جديد لشركتك',
+              `قام ${userName} بتقييم شركتك ${dto.ratingValue} نجوم`,
+              { type: 'NEW_RATING', ratingId: savedRating.ratingId.toString() }
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to send FCM notification for rating:', error);
+    }
+
+    return savedRating;
   }
 
   async findByCompanyId(targetCompanyId: number) {
