@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import { AdminDashboardService } from './admin/services/admin-dashboard.service.js';
 
 @Controller()
 export class AppController {
@@ -14,6 +15,7 @@ export class AppController {
   getPublicConfig() {
     return {
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+      maintenanceMode: AdminDashboardService.maintenanceMode,
     };
   }
 }
