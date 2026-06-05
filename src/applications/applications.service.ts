@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository, Brackets, Not, In } from 'typeorm';
 import { Application } from './application.entity.js';
 import { User } from '../users/user.entity.js';
 import { ApplicantProfile } from '../users/applicant-profile.entity.js';
@@ -254,6 +254,23 @@ export class ApplicationsService {
       if (acceptedCount + 1 >= maxSlots) {
         console.log(`🔒 [updateStatus] Closing Job ${app.jobId} as it is now filled.`);
         await this.jobsService.update(Number(app.jobId), { isActive: false });
+
+        // Find other pending/applied applicants and reject them
+        const pendingApps = await this.repo.find({
+          where: {
+            jobId: app.jobId,
+            status: Not(In(['accepted', 'hired', 'rejected']))
+          }
+        });
+        
+        for (const pendingApp of pendingApps) {
+          if (pendingApp.applicationId !== app.applicationId) {
+            pendingApp.status = 'rejected';
+            await this.repo.save(pendingApp);
+            // ─── Push Notification: Notify other applicants of rejection ───
+            this.notifyApplicantStatusChange(pendingApp.userId, 'rejected', app.job?.title || '').catch(() => {});
+          }
+        }
       }
     } else {
       app.status = status;
