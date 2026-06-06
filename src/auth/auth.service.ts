@@ -521,13 +521,16 @@ export class AuthService {
       // Block company users whose registration is not yet approved
       if (user.role === 'company') {
         const company = await this.companiesService.findByContactEmailOrName(user.email);
-        if (company) {
-          if (company.verificationStatus === 'PENDING') {
-            throw new UnauthorizedException('Your company registration is pending admin approval. Please wait for the admin to review your request.');
-          }
+        if (!company) {
+          // No company profile found — treat as pending
+          throw new UnauthorizedException('Your company registration is pending admin approval. Please wait for the admin to review your request.');
+        }
+        if (company.verificationStatus !== 'APPROVED') {
           if (company.verificationStatus === 'REJECTED') {
             throw new UnauthorizedException(`Your company registration was rejected. Reason: ${company.rejectionReason || 'Registration requirements not met'}. Please contact support for more information.`);
           }
+          // Any status that is not APPROVED (PENDING or any other) blocks login
+          throw new UnauthorizedException('Your company registration is pending admin approval. Please wait for the admin to review your request.');
         }
       }
 
@@ -721,6 +724,20 @@ export class AuthService {
           user.isActive = true;
           user.suspendedUntil = null;
           await this.usersService.update(user.userId, { accountStatus: 'active', isActive: true, suspendedUntil: null });
+        }
+      }
+
+      // Block company users whose registration is not yet approved (Google login)
+      if (user.role === 'company') {
+        const company = await this.companiesService.findByContactEmailOrName(user.email);
+        if (!company) {
+          throw new UnauthorizedException('Your company registration is pending admin approval. Please wait for the admin to review your request.');
+        }
+        if (company.verificationStatus !== 'APPROVED') {
+          if (company.verificationStatus === 'REJECTED') {
+            throw new UnauthorizedException(`Your company registration was rejected. Reason: ${company.rejectionReason || 'Registration requirements not met'}. Please contact support for more information.`);
+          }
+          throw new UnauthorizedException('Your company registration is pending admin approval. Please wait for the admin to review your request.');
         }
       }
 
