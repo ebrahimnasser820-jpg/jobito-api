@@ -14,6 +14,7 @@ import { Admin } from '../admin/entities/admin.entity.js';
 import { AuditLog } from '../audit-logs/audit-log.entity.js';
 import { AdminActivityLog } from '../admin/entities/admin-activity-log.entity.js';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
+import { ImagesModule } from '../images/images.module.js';
 
 @Global()
 @Module({
@@ -24,6 +25,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module.js';
     CompaniesModule,
     TypeOrmModule.forFeature([OtpCode, Admin, AuditLog, AdminActivityLog]),
     AuditLogsModule,
+    ImagesModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -8,8 +8,7 @@ import { Repository } from 'typeorm';
 import { Image, ImageEntityType, ImageType } from './image.entity.js';
 import { CreateImageDto } from './dto/create-image.dto.js';
 import { UsersService } from '../users/users.service.js';
-import * as fs from 'fs';
-import * as path from 'path';
+import { UsersService } from '../users/users.service.js';
 
 @Injectable()
 export class ImagesService {
@@ -31,13 +30,37 @@ export class ImagesService {
             entityType: dto.entity_type as any,
             entityId: dto.entity_id as any,
             imageType: (dto.image_type as any) || ImageType.GALLERY,
-            imageUrl: `/uploads/images/${file.filename}`,
+            data: file.buffer,
+            mimeType: file.mimetype,
             fileSize: file.size,
             altText: dto.alt_text || undefined,
             isPrimary: !!dto.is_primary,
+            imageUrl: '', // placeholder
         });
 
-        return this.repo.save(image);
+        const savedImage = await this.repo.save(image);
+        savedImage.imageUrl = `/images/data/${savedImage.imageId}`;
+        return this.repo.save(savedImage);
+    }
+
+    async findById(imageId: string): Promise<Image | null> {
+        return this.repo.findOne({ where: { imageId } });
+    }
+
+    async uploadDocument(file: Express.Multer.File): Promise<string> {
+        const doc = this.repo.create({
+            imageType: ImageType.DOCUMENT,
+            data: file.buffer,
+            mimeType: file.mimetype,
+            fileSize: file.size,
+            imageUrl: '', // placeholder
+        });
+
+        const saved = await this.repo.save(doc);
+        saved.imageUrl = `/images/data/${saved.imageId}`;
+        await this.repo.save(saved);
+        
+        return saved.imageUrl;
     }
 
     /** Get all images for an entity */
@@ -73,10 +96,6 @@ export class ImagesService {
         });
 
         if (old) {
-            const oldPath = path.join(process.cwd(), old.imageUrl);
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
             await this.repo.remove(old);
         }
 
@@ -84,12 +103,16 @@ export class ImagesService {
             entityType: ImageEntityType.USER,
             entityId: userId,
             imageType: ImageType.PROFILE,
-            imageUrl: `/uploads/images/${file.filename}`,
+            data: file.buffer,
+            mimeType: file.mimetype,
             fileSize: file.size,
             isPrimary: true,
+            imageUrl: '', // placeholder
         });
 
-        const savedImage = await this.repo.save(image);
+        let savedImage = await this.repo.save(image);
+        savedImage.imageUrl = `/images/data/${savedImage.imageId}`;
+        savedImage = await this.repo.save(savedImage);
 
         // Sync with users table
         await this.usersService.update(userId, { avatarUrl: savedImage.imageUrl });
@@ -110,10 +133,6 @@ export class ImagesService {
         });
 
         if (old) {
-            const oldPath = path.join(process.cwd(), old.imageUrl);
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
             await this.repo.remove(old);
         }
 
@@ -121,12 +140,16 @@ export class ImagesService {
             entityType: ImageEntityType.USER,
             entityId: userId,
             imageType: ImageType.COVER,
-            imageUrl: `/uploads/images/${file.filename}`,
+            data: file.buffer,
+            mimeType: file.mimetype,
             fileSize: file.size,
             isPrimary: true,
+            imageUrl: '', // placeholder
         });
 
-        const savedImage = await this.repo.save(image);
+        let savedImage = await this.repo.save(image);
+        savedImage.imageUrl = `/images/data/${savedImage.imageId}`;
+        savedImage = await this.repo.save(savedImage);
 
         // Sync with users table (banner_url)
         await this.usersService.update(userId, { banner_url: savedImage.imageUrl });
@@ -153,12 +176,6 @@ export class ImagesService {
             case ImageEntityType.JOB:
             case ImageEntityType.GROUP:
                 throw new ForbiddenException('Contact admin to delete this image');
-        }
-
-        // Delete file from disk
-        const filePath = path.join(process.cwd(), image.imageUrl);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
         }
 
         await this.repo.remove(image);

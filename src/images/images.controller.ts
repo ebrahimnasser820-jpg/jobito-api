@@ -13,9 +13,11 @@ import {
     MaxFileSizeValidator,
     BadRequestException,
     NotFoundException,
+    Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
+import { Response } from 'express';
 import { extname } from 'path';
 import { ImagesService } from './images.service.js';
 import { CreateImageDto } from './dto/create-image.dto.js';
@@ -23,13 +25,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../common/decorators/user.decorator.js';
 import { ImageEntityType } from './image.entity.js';
 
-const storage = diskStorage({
-    destination: './uploads/images',
-    filename: (_req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
-        cb(null, uniqueName);
-    },
-});
+const storage = memoryStorage();
 
 // Fix issue #7: allow images AND document files for resumes
 const fileFilterConfig = (_req: any, file: any, cb: any) => {
@@ -58,6 +54,18 @@ export class ImagesController {
         @Body() dto: CreateImageDto,
     ) {
         return this.imagesService.create(dto, file);
+    }
+
+    /** GET /images/data/:imageId — serve image binary data */
+    @Get('data/:imageId')
+    async getImageData(@Param('imageId') imageId: string, @Res() res: Response) {
+        const image = await this.imagesService.findById(imageId);
+        if (!image || !image.data) {
+            throw new NotFoundException('Image data not found');
+        }
+        res.set('Content-Type', image.mimeType || 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=31536000');
+        res.send(image.data);
     }
 
     /** GET /images/entity/:type/:id — list images for an entity */

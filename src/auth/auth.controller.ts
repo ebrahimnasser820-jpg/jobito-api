@@ -14,9 +14,9 @@ import {
   BadRequestException
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import type { Response } from 'express';
+import { ImagesService } from '../images/images.service.js';
 import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -28,19 +28,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 
 import * as fs from 'fs';
 
-const storage = diskStorage({
-  destination: (_req, file, cb) => {
-    const dir = './uploads/documents';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const storage = memoryStorage();
 
 const fileFilterConfig = (_req: any, file: any, cb: any) => {
   if (!file.mimetype.match(/\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document|jpg|jpeg|png|heic|heif|webp)$/i)) {
@@ -51,7 +39,10 @@ const fileFilterConfig = (_req: any, file: any, cb: any) => {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(
+    private authService: AuthService,
+    private imagesService: ImagesService
+  ) { }
 
   @Post('refresh-token')
   @UseGuards(JwtAuthGuard)
@@ -73,7 +64,7 @@ export class AuthController {
 
   @Post('upload-document')
   @UseInterceptors(FileInterceptor('file', { storage, fileFilter: fileFilterConfig }))
-  uploadDocument(
+  async uploadDocument(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -83,9 +74,10 @@ export class AuthController {
     )
     file: Express.Multer.File,
   ) {
+    const url = await this.imagesService.uploadDocument(file);
     return {
       message: 'File uploaded successfully',
-      url: `/uploads/documents/${file.filename}`,
+      url,
     };
   }
 
