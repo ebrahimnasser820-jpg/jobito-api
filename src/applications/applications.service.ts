@@ -365,8 +365,8 @@ export class ApplicationsService {
       let body = '';
 
       if (statusLower === 'accepted' || statusLower === 'hired') {
-        title = '🎉 مبروك! تم قبولك';
-        body = `تم قبول طلبك على وظيفة "${jobTitle}"`;
+        title = '🎉 مبروك! تم قبولك وتوظيفك';
+        body = `تم توظيفك في وظيفة "${jobTitle}". يرجى الدخول الآن لتقييم الشركة!`;
       } else if (statusLower === 'rejected') {
         title = '😔 تحديث على طلبك';
         body = `للأسف لم يتم قبول طلبك على وظيفة "${jobTitle}"`;

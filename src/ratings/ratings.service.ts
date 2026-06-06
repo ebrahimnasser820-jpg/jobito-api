@@ -33,7 +33,7 @@ export class RatingsService {
   ) {
     const isCompanyRater = dto.raterType === 'COMPANY';
 
-    // Enforce 10-day waiting period after hiring before allowing rating
+    // Immediate rating allowed - removed 10-day/7-day waiting period
     if (dto.targetUserId) {
       const hiredApp = await this.applicationRepository.findOne({
         where: {
@@ -44,19 +44,8 @@ export class RatingsService {
         order: { appliedAt: 'DESC' },
       });
 
-      if (hiredApp) {
-        const isTradesmanJob = hiredApp.job?.classification === 'tradesman_work' || hiredApp.job?.classification === 'tradesman';
-        const waitDays = isTradesmanJob ? 1 : 7;
-        const waitMs = waitDays * 24 * 60 * 60 * 1000;
-        
-        const hiringDate = new Date(hiredApp.appliedAt).getTime();
-        const now = Date.now();
-        if (now < hiringDate + waitMs) {
-          const daysLeft = Math.ceil((hiringDate + waitMs - now) / (1000 * 60 * 60 * 24));
-          const daysWordWait = waitDays === 1 ? 'يوم' : 'أيام';
-          const daysWordLeft = daysLeft === 1 ? 'يوم' : 'أيام';
-          throw new BadRequestException(`لا يمكن التقييم قبل مرور ${waitDays} ${daysWordWait} من التوظيف. متبقي ${daysLeft} ${daysWordLeft}.`);
-        }
+      if (!hiredApp) {
+        throw new BadRequestException('لا يمكن التقييم إلا للمتقدمين الذين تم توظيفهم');
       }
     }
 
