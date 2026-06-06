@@ -60,7 +60,7 @@ export class AdminContentManagementService {
 
     if (notifyViolation && report.postOwnerId) {
       try {
-        let emailAddress = null;
+        let emailAddress: string | null = null;
         let ownerName = report.postOwnerName;
 
         if (/^\d+$/.test(report.postOwnerId)) {

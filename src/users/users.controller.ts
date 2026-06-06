@@ -162,6 +162,15 @@ export class UsersController {
         const user = await this.usersService.findById(userId);
         if (!user) throw new BadRequestException('User not found');
 
+        // Check if query param is set to permanently delete immediately
+        if (req.query && req.query.permanent === 'true') {
+            await this.usersService.deletePermanently(userId);
+            return {
+                message: 'Account permanently deleted instantly.',
+                permanentDeleteAt: new Date(),
+            };
+        }
+
         if (user.deletionRequestedAt) {
             return { message: 'Account deletion already scheduled', deletionRequestedAt: user.deletionRequestedAt };
         }

@@ -576,23 +576,29 @@ export class JobsService {
 
   async getSimilarJobs(id: number) {
     const job = await this.findOne(id);
-    return this.repo
-      .find({
-        where: {
-          ...(job.categoryId && { categoryId: job.categoryId }),
-          ...(job.jobType && { jobType: job.jobType }),
-          ...(job.classification && { classification: job.classification }),
-          ...(job.companyId && { companyId: Not(job.companyId) }),
-          ...(job.userId && { userId: Not(job.userId) }),
-          isActive: true,
-        },
-        relations: ['company', 'category', 'user', 'categories'],
-        take: 5,
-      })
-      .then((jobs) => {
-        const filtered = jobs.filter((j) => Number(j.jobId) !== id);
-        return filtered.slice(0, 4);
-      });
+    const qb = this.repo
+      .createQueryBuilder('job')
+      .leftJoinAndSelect('job.company', 'company')
+      .leftJoinAndSelect('job.category', 'category')
+      .leftJoinAndSelect('job.user', 'user')
+      .leftJoinAndSelect('job.categories', 'categories')
+      .where('job.isActive = :isActive', { isActive: true })
+      .andWhere('job.jobId != :jobId', { jobId: id });
+
+    if (job.categoryId) {
+      qb.andWhere('job.categoryId = :categoryId', { categoryId: job.categoryId });
+    }
+    if (job.classification) {
+      qb.andWhere('job.classification = :classification', { classification: job.classification });
+    }
+    if (job.companyId) {
+      qb.andWhere('(job.companyId != :companyId OR job.companyId IS NULL)', { companyId: job.companyId });
+    }
+    if (job.userId) {
+      qb.andWhere('(job.userId != :userId OR job.userId IS NULL)', { userId: job.userId });
+    }
+
+    return qb.take(4).getMany();
   }
 
   async getApplicationCount(jobId: number): Promise<number> {

@@ -121,6 +121,28 @@ export class UsersService {
     return null;
   }
 
+  async deletePermanently(userId: string) {
+    const user = await this.findById(userId);
+    if (!user) return;
+    
+    if (user.email) {
+      try {
+        await this.mailService.sendAccountDeletedEmail(user.email, user.fullName || 'User');
+      } catch (e) {
+        this.logger.warn(`Failed to send email: ${e.message}`);
+      }
+    }
+
+    await this.usersRepository.update(userId, {
+      isActive: false,
+      deletionRequestedAt: null,
+      fullName: 'Deleted User',
+      email: `deleted_${userId}@jobito.com`,
+      phone: null,
+      googleId: null,
+    });
+  }
+
   private readonly logger = new Logger(UsersService.name);
 
   async processExpiredDeletions() {

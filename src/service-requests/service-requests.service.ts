@@ -23,12 +23,11 @@ export class ServiceRequestsService {
     const savedRequest = await this.serviceRequestRepository.save(request);
 
     // Notify the tradesman
-    await this.notificationsService.createNotification(
+    await this.notificationsService.sendNotification(
       dto.tradesmanId,
       'New Service Request',
       `You have received a new service request.`,
       'service_request',
-      `/service-requests/${savedRequest.id}`
     );
 
     return savedRequest;

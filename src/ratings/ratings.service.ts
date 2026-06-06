@@ -67,7 +67,7 @@ export class RatingsService {
     try {
       if (isCompanyRater && dto.targetUserId) {
         // Company rated a User
-        const company = await this.companiesService.findOne(dto.companyId);
+        const company = dto.companyId ? await this.companiesService.findOne(dto.companyId) : null;
         const companyName = company ? company.name : 'شركة';
         await this.pushService.sendPushToUser(
           dto.targetUserId,
