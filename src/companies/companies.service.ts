@@ -27,7 +27,8 @@ export class CompaniesService {
 
     const qb = this.repo.createQueryBuilder('company')
       .leftJoinAndSelect('company.jobs', 'job')
-      .leftJoinAndSelect('job.category', 'category');
+      .leftJoinAndSelect('job.category', 'category')
+      .where("company.verificationStatus = 'APPROVED'");
 
     if (filters.search) {
       qb.andWhere(
