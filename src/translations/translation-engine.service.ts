@@ -6,7 +6,7 @@ import { Translation } from './entities/translation.entity.js';
 
 @Injectable()
 export class TranslationEngineService implements OnModuleInit {
-  private readonly baseUrl = process.env.TRANSLATION_SERVICE_URL || 'https://translate-production.up.railway.app';
+  private readonly baseUrl = process.env.TRANSLATION_SERVICE_URL || 'https://translate-production-63ad.up.railway.app';
   private readonly chunkSize = 20;
 
   constructor(

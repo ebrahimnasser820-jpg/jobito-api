@@ -44,5 +44,13 @@ export class FilterJobsDto {
 
     @IsOptional()
     @IsString()
+    jobLevel?: string;
+
+    @IsOptional()
+    @IsString()
+    salaryRange?: string;
+
+    @IsOptional()
+    @IsString()
     _t?: string;
 }

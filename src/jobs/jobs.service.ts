@@ -234,7 +234,17 @@ export class JobsService {
       }
 
       if (filters.jobType) {
-        qb.andWhere('job.jobType = :jobType', { jobType: filters.jobType });
+        // jobType could be a comma-separated string from the frontend
+        const types = filters.jobType.split(',').map(t => t.trim());
+        qb.andWhere(new Brackets(qb => {
+          types.forEach((t, idx) => {
+            if (idx === 0) {
+              qb.where(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: t });
+            } else {
+              qb.orWhere(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: t });
+            }
+          });
+        }));
       }
 
       if (filters.categoryId && !isNaN(parseInt(filters.categoryId))) {
@@ -255,8 +265,94 @@ export class JobsService {
         });
       }
 
-      // Order is already set by Semantic Search or fallback
-      
+      if (filters.jobLevel) {
+        const levels = filters.jobLevel.split(',').map(l => l.trim().toLowerCase());
+        const mappedLevels = levels.map(l => {
+          if (l === "technical" || l === "تقني") return "تقني";
+          if (l === "non-technical" || l === "غير تقني") return "غير تقني";
+          if (l === "services") return "خدمات";
+          if (l === "tradesman") return "tradesman";
+          return l;
+        });
+        qb.andWhere('LOWER(job.classification) IN (:...mappedLevels)', { mappedLevels });
+      }
+
+      if (filters.salaryRange) {
+        const ranges = filters.salaryRange.split(',').map(r => r.trim());
+        qb.andWhere(new Brackets(query => {
+          ranges.forEach((range, idx) => {
+            const prefix = idx === 0 ? 'where' : 'orWhere';
+            if (range === "<700") {
+              query[prefix]('(job.salary > 0 AND job.salary < 700) OR (job.salaryMin > 0 AND job.salaryMin < 700)');
+            } else if (range === "700-1000") {
+              query[prefix]('(job.salary >= 700 AND job.salary < 1000) OR (job.salaryMin >= 700 AND job.salaryMin < 1000)');
+            } else if (range === "1000-1500") {
+              query[prefix]('(job.salary >= 1000 AND job.salary < 1500) OR (job.salaryMin >= 1000 AND job.salaryMin < 1500)');
+            } else if (range === "1500-2000") {
+              query[prefix]('(job.salary >= 1500 AND job.salary < 2000) OR (job.salaryMin >= 1500 AND job.salaryMin < 2000)');
+            } else if (range === "3000+") {
+              query[prefix]('job.salary >= 3000 OR job.salaryMin >= 3000');
+            } else if (range === "Not specified") {
+              query[prefix]('job.salary IS NULL AND job.salaryMin IS NULL');
+            }
+          });
+        }));
+      }
+
+      // Calculate Facets efficiently using a clone before pagination
+      const facetQb = qb.clone();
+      const allMatchingJobs = await facetQb.select([
+        'job.jobId', 'job.jobType', 'job.salary', 'job.salaryMin', 
+        'job.categoryId', 'job.classification'
+      ]).getMany();
+
+      const facets = {
+        jobType: {} as Record<string, number>,
+        category: {} as Record<string, number>,
+        level: {} as Record<string, number>,
+        salary: {} as Record<string, number>,
+      };
+
+      allMatchingJobs.forEach(j => {
+        // Job Type
+        const types = Array.isArray(j.jobType) ? j.jobType : [];
+        types.forEach(t => {
+          let key = 'Full-time';
+          const lowerT = String(t).toLowerCase();
+          if (lowerT.includes('part')) key = 'Part-time';
+          else if (lowerT.includes('freelance') || lowerT.includes('عمل حر')) key = 'Freelance';
+          else if (lowerT.includes('intern')) key = 'Internship';
+          else if (lowerT.includes('remote')) key = 'Remote';
+          else if (lowerT.includes('one-time') || lowerT.includes('2')) key = 'One-time';
+          facets.jobType[key] = (facets.jobType[key] || 0) + 1;
+        });
+
+        // Category (we group by categoryId but frontend maps it, so we map to names or ids)
+        if (j.categoryId) {
+           const idStr = j.categoryId.toString();
+           facets.category[idStr] = (facets.category[idStr] || 0) + 1;
+        }
+
+        // Level (classification)
+        let level = 'Other';
+        const cls = String(j.classification).toLowerCase();
+        if (cls === 'تقني') level = 'Technical';
+        else if (cls === 'غير تقني') level = 'Non-Technical';
+        else if (cls === 'خدمات') level = 'Services';
+        else if (cls === 'tradesman') level = 'Tradesman';
+        facets.level[level] = (facets.level[level] || 0) + 1;
+
+        // Salary
+        const sal = j.salary || j.salaryMin || 0;
+        let salRange = 'Not specified';
+        if (sal > 0 && sal < 700) salRange = '<700';
+        else if (sal >= 700 && sal < 1000) salRange = '700-1000';
+        else if (sal >= 1000 && sal < 1500) salRange = '1000-1500';
+        else if (sal >= 1500 && sal < 2000) salRange = '1500-2000';
+        else if (sal >= 3000) salRange = '3000+';
+        facets.salary[salRange] = (facets.salary[salRange] || 0) + 1;
+      });
+
       const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
 
       const mappedData = data.map(j => ({
@@ -297,12 +393,19 @@ export class JobsService {
       // Fetch ratings in parallel for better performance
       const resultsWithRatings = await Promise.all(mappedData.map(async (job: any) => {
         let avgRating = 0;
+        let jobRating = 0;
+        
+        // Fetch User/Company Overall Rating
         if (job.user) {
           avgRating = await this.ratingsService.getAverageRatingForUser(job.user.userId);
         } else if (job.company) {
           avgRating = await this.ratingsService.getAverageRatingForCompany(job.company.companyId);
         }
-        return { ...job, avgRating };
+        
+        // Fetch Rating for this specific Job
+        jobRating = await this.ratingsService.getAverageRatingForJob(job.jobId);
+        
+        return { ...job, avgRating, jobRating };
       }));
 
       return {
@@ -311,6 +414,7 @@ export class JobsService {
         page,
         limit,
         totalPages: Math.ceil(total / (limit || 1)),
+        facets,
       };
     } catch (error: unknown) {
       const err = error as Error;

@@ -167,4 +167,13 @@ export class RatingsService {
       .getRawOne();
     return parseFloat(result?.avg || '0');
   }
+
+  async getAverageRatingForJob(jobId: number) {
+    const result = await this.ratingsRepository
+      .createQueryBuilder('rating')
+      .select('AVG(rating.ratingValue)', 'avg')
+      .where('rating.jobId = :jobId', { jobId })
+      .getRawOne();
+    return parseFloat(result?.avg || '0');
+  }
 }

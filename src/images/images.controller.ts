@@ -14,6 +14,7 @@ import {
     BadRequestException,
     NotFoundException,
     Res,
+    Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -58,13 +59,22 @@ export class ImagesController {
 
     /** GET /images/data/:imageId — serve image binary data */
     @Get('data/:imageId')
-    async getImageData(@Param('imageId') imageId: string, @Res() res: Response) {
+    async getImageData(@Param('imageId') imageId: string, @Query('download') download: string, @Res() res: Response) {
         const image = await this.imagesService.findById(imageId);
         if (!image || !image.data) {
             throw new NotFoundException('Image data not found');
         }
         res.set('Content-Type', image.mimeType || 'image/jpeg');
         res.set('Cache-Control', 'public, max-age=31536000');
+        
+        if (download === 'true') {
+            const ext = extname(image.mimeType || '').split('/')[1] || 'bin';
+            const filename = image.altText || `file-${imageId}.${ext}`;
+            res.set('Content-Disposition', `attachment; filename="${filename}"`);
+        } else {
+            res.set('Content-Disposition', 'inline');
+        }
+        
         res.send(image.data);
     }
 
