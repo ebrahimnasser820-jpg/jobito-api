@@ -645,7 +645,7 @@ export class AuthService {
 
   // ─── Google Login ─────────────────────────────────────────────
 
-  async validateGoogleUser(token: string) {
+  async validateGoogleUser(token: string, mode?: 'login' | 'register') {
     if (AdminDashboardService.maintenanceMode) {
       throw new UnauthorizedException('The system is currently undergoing maintenance. Login is temporarily disabled. Please try again later.');
     }
@@ -687,7 +687,23 @@ export class AuthService {
       let user = await this.usersService.findByEmail(email);
 
       if (!user) {
-        const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+        // ─── LOGIN MODE: User must already exist ───
+        if (mode === 'login') {
+          throw new UnauthorizedException('No account found with this Google email. Please sign up first.');
+        }
+
+        // ─── REGISTER MODE: Create a new account ───
+        // Generate a readable random password (12 chars: letters + digits + special)
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        const special = '!@#$%&*';
+        let randomPassword = '';
+        for (let i = 0; i < 10; i++) {
+          randomPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        // Add 2 special characters for strength
+        randomPassword += special.charAt(Math.floor(Math.random() * special.length));
+        randomPassword += special.charAt(Math.floor(Math.random() * special.length));
+
         const hash = await bcrypt.hash(randomPassword, 10);
 
         user = await this.usersService.create({
@@ -699,6 +715,17 @@ export class AuthService {
           role: 'user',
           isActive: true,
         });
+
+        // Send the generated password to the user's email
+        this.mailService.sendGoogleWelcomePassword(
+          email,
+          name || email.split('@')[0],
+          randomPassword,
+        ).catch(err => {
+          this.logger.error(`[AuthService] Failed to send Google welcome password email to ${email}: ${err.message}`);
+        });
+
+        this.logger.info(`✅ New Google user created: ${email} — welcome password sent via email.`);
       } else {
         // Auto-Link if email exists but googleId is missing
         if (!user.googleId) {

@@ -145,8 +145,8 @@ export class AuthController {
 
   // ─── Google Auth ────────────────────────────────────────────────────────
   @Post('google-login')
-  async googleLogin(@Body('token') token: string) {
-    return this.authService.validateGoogleUser(token);
+  async googleLogin(@Body('token') token: string, @Body('mode') mode?: string) {
+    return this.authService.validateGoogleUser(token, mode as 'login' | 'register');
   }
 
   @Post('link-google')

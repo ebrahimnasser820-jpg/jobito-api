@@ -282,6 +282,45 @@ export class MailService {
       `,
     });
   }
+  /** Send auto-generated password to new Google sign-up users */
+  async sendGoogleWelcomePassword(to: string, name: string, password: string): Promise<void> {
+    await this.send({
+      from: `"Jobito" <${this.fromEmail}>`,
+      to,
+      subject: 'Jobito — Welcome! Here is your account password 🔑',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 40px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: #dbeafe; color: #2563eb; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; font-size: 32px; margin-bottom: 16px;">🔑</div>
+            <h1 style="color: #111827; font-size: 22px; font-weight: 800; margin: 0;">Welcome to Jobito!</h1>
+          </div>
+          
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            Hello <b>${name}</b>,
+          </p>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            Your account has been created successfully using Google. We have generated a password for you so you can also log in using your email and password:
+          </p>
+
+          <div style="background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+            <p style="font-size: 13px; color: #6b7280; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Your Password</p>
+            <span style="font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #16a34a; display: block; padding: 8px 0; font-family: monospace; word-break: break-all;">${password}</span>
+          </div>
+
+          <div style="background: #fefce8; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+            <p style="font-size: 14px; color: #92400e; margin: 0; font-weight: 600;">⚠️ Important Security Notice</p>
+            <p style="font-size: 13px; color: #78716c; margin: 8px 0 0 0;">We recommend changing this password from your account settings after logging in. Do not share this password with anyone.</p>
+          </div>
+
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            Thank you for joining Jobito! 🎉
+          </p>
+        </div>
+      `,
+    });
+  }
+
   /** Send account deletion confirmation email */
   async sendAccountDeletedEmail(to: string, name: string): Promise<void> {
     await this.send({
