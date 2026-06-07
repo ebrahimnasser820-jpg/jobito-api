@@ -113,17 +113,28 @@ export class ChatService {
         if (chats.length === 0) return [];
 
         const otherUserIds = chats.map(c => c.partnerId);
+        
+        // Find in Users
         const usersInfo = await this.usersRepository.find({
             where: { userId: In(otherUserIds) },
             select: ['userId', 'fullName', 'avatarUrl', 'email'],
         });
 
-        const userMap = new Map(usersInfo.map(u => [u.userId, u]));
+        // Find in Admins
+        const adminsInfo = await this.adminRepository.find({
+            where: { adminId: In(otherUserIds) },
+            select: ['adminId', 'fullName', 'email'],
+        });
+
+        // Merge into a single map
+        const userMap = new Map<string, any>();
+        usersInfo.forEach(u => userMap.set(u.userId, u));
+        adminsInfo.forEach(a => userMap.set(a.adminId, { ...a, userId: a.adminId, avatarUrl: null }));
 
         return chats.map((chat) => {
             const userInfo = userMap.get(chat.partnerId);
             return {
-                oderId: chat.partnerId,
+                oderId: chat.partnerId, // Keeping the typo for frontend compatibility
                 name: userInfo?.fullName || 'Unknown User',
                 avatar: userInfo?.avatarUrl || null,
                 email: userInfo?.email || '',
