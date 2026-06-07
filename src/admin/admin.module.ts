@@ -39,6 +39,7 @@ import { AdminRolesGuard } from './guards/admin-roles.guard.js';
 // External modules
 import { MailModule } from '../mail/mail.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { GatewayModule } from '../common/gateways/gateway.module.js';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
     }),
     MailModule,
     NotificationsModule,
+    GatewayModule,
   ],
   controllers: [AdminAuthController, AdminOpsController],
   providers: [

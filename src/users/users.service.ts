@@ -46,6 +46,7 @@ export class UsersService {
       fullName: updatedUser.fullName,
       avatarUrl: updatedUser.avatarUrl,
     });
+    this.gateway.notifyAdminUpdate('users', 'created', updatedUser);
 
     return updatedUser;
   }
@@ -108,6 +109,8 @@ export class UsersService {
         themePreference: updatedUser.themePreference,
         languagePreference: updatedUser.languagePreference,
       }).catch(err => this.logger.warn(`⚠️ MongoDB profile sync failed on user update: ${err.message}`));
+      
+      this.gateway.notifyAdminUpdate('users', 'updated', updatedUser);
     }
 
     return updatedUser;
@@ -116,7 +119,9 @@ export class UsersService {
   async remove(userId: string) {
     const user = await this.findById(userId);
     if (user) {
-      return await this.usersRepository.remove(user);
+      const removedUser = await this.usersRepository.remove(user);
+      this.gateway.notifyAdminUpdate('users', 'deleted', removedUser);
+      return removedUser;
     }
     return null;
   }

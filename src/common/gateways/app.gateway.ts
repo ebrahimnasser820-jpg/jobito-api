@@ -47,6 +47,16 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { event: 'joined', data: `user_${data.userId}` };
     }
 
+    // ─── Admin Room ──────────────────────────────────────────────────────
+    @SubscribeMessage('join_admin')
+    handleJoinAdmin(
+        @ConnectedSocket() client: Socket,
+    ) {
+        client.join('admin_dashboard');
+        console.log(`Client ${client.id} joined admin dashboard room`);
+        return { event: 'joined', data: 'admin_dashboard' };
+    }
+
     // Generic method to emit events to specific rooms
     emitToRoom(room: string, event: string, payload: any) {
         if (this.server) {
@@ -61,6 +71,21 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Specifically for Postgres updates
     notifyUserUpdate(userId: string, data: any) {
         this.emitToRoom(`user_${userId}`, 'user_updated', data);
+    }
+
+    notifyForceLogout(userId: string, reason: string) {
+        this.emitToRoom(`user_${userId}`, 'force_logout', { reason });
+    }
+
+    // ─── Admin Dashboard Updates ─────────────────────────────────────────
+    // يمكن استدعاء هذه الدالة من أي Service عند حدوث تغيير (إضافة، تعديل، حذف)
+    notifyAdminUpdate(entityName: string, action: 'created' | 'updated' | 'deleted', data?: any) {
+        this.emitToRoom('admin_dashboard', 'admin_data_updated', {
+            entity: entityName,
+            action,
+            data,
+            timestamp: new Date().toISOString()
+        });
     }
 
     // Specifically for P2P Chat messages (frontend expects new_p2p_message)

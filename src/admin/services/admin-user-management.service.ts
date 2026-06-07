@@ -7,6 +7,7 @@ import { UserAction, UserActionType } from '../entities/user-action.entity.js';
 import { AdminAuthService } from './admin-auth.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
 import { MailService } from '../../mail/mail.service.js';
+import { AppGateway } from '../../common/gateways/app.gateway.js';
 
 @Injectable()
 export class AdminUserManagementService {
@@ -19,6 +20,7 @@ export class AdminUserManagementService {
     private notificationsService: NotificationsService,
     private mailService: MailService,
     private dataSource: DataSource,
+    private appGateway: AppGateway,
   ) {}
 
   /**
@@ -257,6 +259,11 @@ export class AdminUserManagementService {
       }
     } catch (error) {
       console.error('Failed to send moderation email:', error);
+    }
+
+    // Force logout if the user was suspended, banned, or deleted
+    if (!user.isActive) {
+      this.appGateway.notifyForceLogout(targetUserId, reason || `Your account was ${newStatus}`);
     }
 
     return {
