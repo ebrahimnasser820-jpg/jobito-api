@@ -271,10 +271,23 @@ export class JobsService {
           if (l === "technical" || l === "تقني") return "تقني";
           if (l === "non-technical" || l === "غير تقني") return "غير تقني";
           if (l === "services") return "خدمات";
-          if (l === "tradesman") return "tradesman";
+          if (l === "tradesman" || l === "حرفي") return "tradesman";
           return l;
         });
-        qb.andWhere('LOWER(job.classification) IN (:...mappedLevels)', { mappedLevels });
+        
+        qb.andWhere(new Brackets(query => {
+          if (mappedLevels.includes('tradesman')) {
+            const otherLevels = mappedLevels.filter(l => l !== 'tradesman');
+            if (otherLevels.length > 0) {
+              query.where('LOWER(job.classification) IN (:...otherLevels)', { otherLevels })
+                   .orWhere('job.userId IS NOT NULL');
+            } else {
+              query.where('job.userId IS NOT NULL');
+            }
+          } else {
+            query.where('LOWER(job.classification) IN (:...mappedLevels)', { mappedLevels });
+          }
+        }));
       }
 
       if (filters.salaryRange) {
@@ -303,7 +316,7 @@ export class JobsService {
       const facetQb = qb.clone();
       const allMatchingJobs = await facetQb.select([
         'job.jobId', 'job.jobType', 'job.salary', 'job.salaryMin', 
-        'job.categoryId', 'job.classification'
+        'job.categoryId', 'job.classification', 'job.userId'
       ]).getMany();
 
       const facets = {
@@ -336,10 +349,17 @@ export class JobsService {
         // Level (classification)
         let level = 'Other';
         const cls = String(j.classification).toLowerCase();
-        if (cls === 'تقني') level = 'Technical';
-        else if (cls === 'غير تقني') level = 'Non-Technical';
-        else if (cls === 'خدمات') level = 'Services';
-        else if (cls === 'tradesman') level = 'Tradesman';
+        if (j.userId) {
+          level = 'Tradesman';
+        } else if (cls === 'تقني') {
+          level = 'Technical';
+        } else if (cls === 'غير تقني') {
+          level = 'Non-Technical';
+        } else if (cls === 'خدمات') {
+          level = 'Services';
+        } else if (cls === 'tradesman') {
+          level = 'Tradesman';
+        }
         facets.level[level] = (facets.level[level] || 0) + 1;
 
         // Salary
