@@ -434,31 +434,24 @@ export class AuthService {
         throw new UnauthorizedException('Admin account is deactivated');
       }
 
-      const payload = {
-        sub: admin.adminId,
-        adminId: admin.adminId,
-        email: admin.email,
-        role: 'admin',
-        adminRole: admin.role,
-        name: admin.fullName,
-        avatar: admin.avatarUrl,
-      };
-
-      // Log admin login activity to AdminActivityLog (the table Operations Monitor reads from)
+      const code = this.generateCode();
+      await this.saveOtp(admin.adminId, code);
+      
       try {
-        await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
-          adminId: admin.adminId,
-          actionType: 'LOGIN',
-          targetEntity: 'Admin',
-          targetId: admin.adminId,
-          description: `${admin.fullName} logged in successfully`,
-          metadata: { email: admin.email, role: admin.role },
-        }));
-      } catch (logErr) {
-        this.logger.warn(`Failed to log admin login to AdminActivityLog: ${logErr.message}`);
+        await this.mailService.sendAdmin2FACode(admin.email, code);
+        this.logger.log(`🔐 2FA code sent to admin ${admin.email}`);
+      } catch (err) {
+        this.logger.error(`Failed to send 2FA email to ${admin.email}: ${err.message}`);
+        throw new BadRequestException('Failed to send 2FA verification email. Please try again later.');
       }
 
-      return { access_token: this.jwtService.sign(payload) };
+      // We DO NOT log them in yet, nor generate JWT
+      return {
+        message: '2FA required for admin login',
+        requires2FA: true,
+        email: admin.email,
+        role: 'admin'
+      };
     }
 
     // 2. Try finding in Users table
@@ -598,6 +591,48 @@ export class AuthService {
     }
 
     throw new UnauthorizedException('Invalid credentials');
+  }
+
+  // ─── Verify Admin 2FA ─────────────────────────────────────────
+  async verifyAdmin2FA(email: string, code: string) {
+    const adminUser = await this.adminRepo.findOne({ where: { email } });
+    if (!adminUser) {
+      throw new UnauthorizedException('Admin account not found');
+    }
+
+    if (!adminUser.isActive) {
+      throw new UnauthorizedException('Admin account is deactivated');
+    }
+
+    // Validate the OTP
+    await this.validateOtp(adminUser.adminId, code);
+
+    // If valid, generate JWT payload
+    const payload = {
+      sub: adminUser.adminId,
+      adminId: adminUser.adminId,
+      email: adminUser.email,
+      role: 'admin',
+      adminRole: adminUser.role,
+      name: adminUser.fullName,
+      avatar: adminUser.avatarUrl,
+    };
+
+    // Log admin login activity to AdminActivityLog
+    try {
+      await this.adminActivityLogRepo.save(this.adminActivityLogRepo.create({
+        adminId: adminUser.adminId,
+        actionType: 'LOGIN',
+        targetEntity: 'Admin',
+        targetId: adminUser.adminId,
+        description: `${adminUser.fullName} logged in successfully via 2FA`,
+        metadata: { email: adminUser.email, role: adminUser.role, via2FA: true },
+      }));
+    } catch (logErr) {
+      this.logger.warn(`Failed to log admin login to AdminActivityLog: ${logErr.message}`);
+    }
+
+    return { access_token: this.jwtService.sign(payload) };
   }
 
   // ─── Forgot Password ─────────────────────────────────────────

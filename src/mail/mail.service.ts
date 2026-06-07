@@ -356,4 +356,42 @@ export class MailService {
       `,
     });
   }
+
+  /** Send 2FA code to System Admin for Dashboard Access */
+  async sendAdmin2FACode(to: string, code: string): Promise<void> {
+    await this.send({
+      from: `"Jobito Security" <${this.fromEmail}>`,
+      to,
+      subject: 'Jobito — System Admin Login 2FA Code 🔐',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 40px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: #e0e7ff; color: #4f46e5; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; font-size: 32px; margin-bottom: 16px;">
+              🔐
+            </div>
+            <h1 style="color: #111827; font-size: 22px; font-weight: 800; margin: 0;">Admin Authentication</h1>
+          </div>
+          
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">
+            A login attempt was detected for your System Admin account. Please use the verification code below to complete the authentication process.
+          </p>
+
+          <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+            <p style="font-size: 13px; color: #64748b; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Your 2FA Code</p>
+            <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0f172a; display: block; padding: 8px 0; font-family: monospace;">${code}</span>
+          </div>
+
+          <div style="background: #fefce8; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+            <p style="font-size: 14px; color: #92400e; margin: 0; font-weight: 600;">⚠️ Security Notice</p>
+            <p style="font-size: 13px; color: #78716c; margin: 8px 0 0 0;">This code expires in 10 minutes. If you did not attempt to log in, please secure your account immediately or contact the IT department.</p>
+          </div>
+
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            Jobito Security Operations Center
+          </p>
+        </div>
+      `,
+    });
+  }
 }

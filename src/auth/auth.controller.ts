@@ -86,6 +86,11 @@ export class AuthController {
     return this.authService.login(body);
   }
 
+  @Post('verify-admin-2fa')
+  verifyAdmin2FA(@Body() body: VerifyEmailDto) {
+    return this.authService.verifyAdmin2FA(body.email, body.code);
+  }
+
   @Post('verify-email')
   verifyEmail(@Body() body: VerifyEmailDto) {
     return this.authService.verifyEmail(body.email, body.code);
