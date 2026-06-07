@@ -46,6 +46,8 @@ export class UsersController {
     @Put('me')
     async updateProfile(@Request() req, @Body() body: any) {
         const userId = req.user.sub;
+        const user = await this.usersService.findById(userId);
+        if (!user) throw new BadRequestException('User not found');
 
         // Extract only allowed fields
         const updateData: any = {};
