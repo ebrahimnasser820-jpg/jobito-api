@@ -81,6 +81,22 @@ export class UsersController {
         if (body.languagePreference !== undefined) updateData.languagePreference = body.languagePreference;
         if (body.banner_url !== undefined) updateData.banner_url = body.banner_url;
 
+        const targetClassification = updateData.classification !== undefined ? updateData.classification : user.classification;
+        if (targetClassification === 'tradesman') {
+            const hasServices = (updateData.services && updateData.services.length > 0) || (user.services && user.services.length > 0);
+            const hasCriminalRecord = !!updateData.criminalRecordUrl || !!user.criminalRecordUrl;
+            
+            if (!hasServices || !hasCriminalRecord) {
+                throw new BadRequestException({
+                    message: 'يجب استكمال بيانات الحرفي (الخدمات والفيش الجنائي) أولاً.',
+                    missingFields: {
+                        services: !hasServices,
+                        criminalRecord: !hasCriminalRecord
+                    }
+                });
+            }
+        }
+
         const updatedUser = await this.usersService.update(userId, updateData);
         const { access_token } = await this.authService.refreshUserToken(userId);
         
