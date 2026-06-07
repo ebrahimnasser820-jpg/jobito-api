@@ -100,11 +100,22 @@ export class UsersController {
         }
 
         const updatedUser = await this.usersService.update(userId, updateData);
-        const { access_token } = await this.authService.refreshUserToken(userId);
         
         // Exclude relations to avoid circular reference issues in serialization
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { applications, applicantProfile, ...cleanUser } = updatedUser as any;
+
+        // If the user's account is now pending admin approval, tell the client to logout
+        if (updatedUser.accountStatus === 'pending') {
+            return {
+                ...cleanUser,
+                ...(applicantProfile || {}),
+                requiresLogout: true,
+                message: 'Account is pending admin approval'
+            };
+        }
+
+        const { access_token } = await this.authService.refreshUserToken(userId);
         
         return {
             ...cleanUser,
