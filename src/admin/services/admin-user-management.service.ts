@@ -263,7 +263,14 @@ export class AdminUserManagementService {
 
     // Force logout if the user was suspended, banned, or deleted
     if (!user.isActive) {
+      // 1. Send signal to frontend to clear token and redirect
       this.appGateway.notifyForceLogout(targetUserId, reason || `Your account was ${newStatus}`);
+      
+      // 2. Forcefully cut off any existing WebSocket connections from the server side
+      // so they receive absolutely no further data broadcasts.
+      setTimeout(() => {
+         this.appGateway.disconnectUserSockets(targetUserId);
+      }, 500); // Small delay to ensure the force_logout event reaches the client first
     }
 
     return {

@@ -77,6 +77,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.emitToRoom(`user_${userId}`, 'force_logout', { reason });
     }
 
+    disconnectUserSockets(userId: string) {
+        if (this.server) {
+            // Disconnects all socket connections in this user's room
+            this.server.in(`user_${userId}`).disconnectSockets(true);
+        }
+    }
+
     // ─── Admin Dashboard Updates ─────────────────────────────────────────
     // يمكن استدعاء هذه الدالة من أي Service عند حدوث تغيير (إضافة، تعديل، حذف)
     notifyAdminUpdate(entityName: string, action: 'created' | 'updated' | 'deleted', data?: any) {
