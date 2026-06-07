@@ -101,20 +101,20 @@ export class AdminUserManagementService {
     if (userIds.length > 0) {
       try {
         const ratings = await this.dataSource.query(
-          `SELECT rated_user_id, AVG(score) as avg_rating, COUNT(*) as rating_count
+          `SELECT target_user_id, AVG(rating_value) as avg_rating, COUNT(*) as rating_count
            FROM ptj.ratings
-           WHERE rated_user_id = ANY($1)
-           GROUP BY rated_user_id`,
+           WHERE target_user_id = ANY($1)
+           GROUP BY target_user_id`,
           [userIds],
         );
         ratings.forEach((r: any) => {
-          userRatings[r.rated_user_id] = {
+          userRatings[r.target_user_id] = {
             average: parseFloat(parseFloat(r.avg_rating).toFixed(1)),
             count: parseInt(r.rating_count),
           };
         });
-      } catch {
-        // Ratings table might not exist yet
+      } catch (err) {
+        console.error("Error fetching ratings:", err);
       }
     }
 
