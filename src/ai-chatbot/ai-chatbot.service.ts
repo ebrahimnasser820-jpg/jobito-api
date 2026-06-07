@@ -40,6 +40,31 @@ export class AiChatbotService {
         `Streaming from Python AI for user ${userId}: ${message} (File: ${fileType})`,
       );
 
+      // 0. Basic Backend Filtering for off-topic queries
+      const offTopicKeywords = [
+        'طبخ', 'وصفة', 'كيف اطبخ', 'مقادير', 
+        'سياسة', 'حزب', 'رئيس', 'انتخابات',
+        'مباراة', 'كورة', 'الاهلي', 'الزمالك', 'ريال مدريد', 'برشلونة',
+        'فيلم', 'مسلسل', 'اغنية', 'سينما', 
+        'تاريخ', 'قصة حياة', 'نكتة', 'فزورة'
+      ];
+      const isOffTopic = offTopicKeywords.some(keyword => message.includes(keyword));
+      
+      if (isOffTopic) {
+        this.logger.debug(`Blocked off-topic message in backend for user ${userId}: ${message}`);
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        const replyMessage = 'أعتذر، لكن هذا ليس من اختصاصي. أنا المساعد الذكي لجوبيتو 🎯 وتخصصي فقط هو مساعدتك في البحث عن وظائف، التسجيل في المنصة، والخدمات المهنية.';
+        res.write(`data: ${JSON.stringify({ text: replyMessage })}\n\n`);
+        res.write(`data: [DONE]\n\n`);
+        res.end();
+        
+        await this.saveToMongo(userId, message, replyMessage);
+        return;
+      }
+
       // 1. Fetch history
       let history: { role: string; content: string }[] = [];
       try {
