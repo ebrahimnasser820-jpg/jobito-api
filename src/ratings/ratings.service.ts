@@ -32,26 +32,60 @@ export class RatingsService {
     currentUserId: string,
   ) {
     const isCompanyRater = dto.raterType === 'COMPANY';
+    const raterUserId = !isCompanyRater ? currentUserId : null;
+    const raterCompanyId = isCompanyRater ? dto.companyId : null;
+    const targetUserId = dto.targetUserId || null;
+    const targetCompanyId = !isCompanyRater && dto.companyId ? dto.companyId : null;
 
-    if (dto.targetUserId) {
-      const hiredApp = await this.applicationRepository.findOne({
-        where: {
-          userId: dto.targetUserId,
-          ...(dto.jobId && { jobId: dto.jobId }),
+    const whereConditions = [];
+
+    if (isCompanyRater && targetUserId) {
+      // Company rating User (Applicant)
+      whereConditions.push({
+        userId: targetUserId,
+        status: In(['hired', 'accepted']),
+        job: { companyId: raterCompanyId },
+        ...(dto.jobId && { jobId: dto.jobId }),
+      });
+    } else if (!isCompanyRater && targetCompanyId) {
+      // User (Applicant) rating Company
+      whereConditions.push({
+        userId: raterUserId,
+        status: In(['hired', 'accepted']),
+        job: { companyId: targetCompanyId },
+        ...(dto.jobId && { jobId: dto.jobId }),
+      });
+    } else if (!isCompanyRater && targetUserId) {
+      // User rating User (either Applicant rating Tradesman, or Tradesman rating Applicant)
+      whereConditions.push(
+        {
+          userId: raterUserId, // Rater is Applicant
           status: In(['hired', 'accepted']),
+          job: { userId: targetUserId }, // Target is Job Owner
+          ...(dto.jobId && { jobId: dto.jobId }),
         },
+        {
+          userId: targetUserId, // Target is Applicant
+          status: In(['hired', 'accepted']),
+          job: { userId: raterUserId }, // Rater is Job Owner
+          ...(dto.jobId && { jobId: dto.jobId }),
+        }
+      );
+    }
+
+    if (whereConditions.length > 0) {
+      const hiredApp = await this.applicationRepository.findOne({
+        where: whereConditions,
         relations: ['job'],
         order: { appliedAt: 'DESC' },
       });
 
       if (!hiredApp) {
-        throw new BadRequestException('لا يمكن التقييم إلا للمتقدمين الذين تم توظيفهم');
+        throw new BadRequestException('لا يمكن التقييم إلا بعد القبول في الوظيفة');
       }
 
-      if (hiredApp.ratingClosed) {
-        // Skip 7-day wait if rating is explicitly unlocked
-      } else {
-        const waitDays: number = 7;
+      if (!hiredApp.ratingClosed) {
+        const waitDays = 7;
         const waitMs = waitDays * 24 * 60 * 60 * 1000;
         
         const hiringDate = new Date(hiredApp.appliedAt).getTime();
@@ -91,9 +125,9 @@ export class RatingsService {
           `قامت ${companyName} بتقييمك ${dto.ratingValue} نجوم`,
           { type: 'NEW_RATING', ratingId: savedRating.ratingId.toString() }
         );
-      } else if (!isCompanyRater && dto.targetCompanyId) {
+      } else if (!isCompanyRater && targetCompanyId) {
         // User rated a Company
-        const company = await this.companiesService.findOne(dto.targetCompanyId);
+        const company = await this.companiesService.findOne(targetCompanyId);
         if (company && company.contactEmail) {
           const companyOwner = await this.usersService.findByEmail(company.contactEmail);
           if (companyOwner) {
