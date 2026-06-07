@@ -115,6 +115,16 @@ export class ApplicationsController {
     return application || null;
   }
 
+  @Patch(':id/unlock-rating')
+  @UseGuards(RolesGuard)
+  @Roles('company', 'tradesman', 'user')
+  unlockRating(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.applicationsService.unlockRating(id, user.sub);
+  }
+
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('company', 'student', 'tradesman', 'user')

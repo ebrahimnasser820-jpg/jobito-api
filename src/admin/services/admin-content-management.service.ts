@@ -32,26 +32,55 @@ export class AdminContentManagementService {
     });
     return {
       data: reports.map((r) => ({
-        reportId: r.reportId, postOwner: r.postOwnerName, postOwnerId: r.postOwnerId,
-        content: r.contentText || r.customReason || "Reported Profile/Item", 
-        contentType: r.contentType, contentId: r.contentId,
-        reason: r.reason, customReason: r.customReason, status: r.status, createdAt: r.createdAt,
+        reportId: r.reportId,
+        postOwner: r.postOwnerName,
+        postOwnerId: r.postOwnerId,
+        content: r.contentText || r.customReason || 'Reported Profile/Item',
+        contentType: r.contentType,
+        contentId: r.contentId,
+        reason: r.reason,
+        customReason: r.customReason,
+        status: r.status,
+        createdAt: r.createdAt,
       })),
-      total, page, limit, totalPages: Math.ceil(total / limit),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
-  } 
+  }
 
-  async reviewContent(adminId: string, reportId: number, action: 'delete' | 'dismiss', notifyViolation?: boolean) {
-    const report = await this.reportedContentRepo.findOne({ where: { reportId } });
+  async reviewContent(
+    adminId: string,
+    reportId: number,
+    action: 'delete' | 'dismiss',
+    notifyViolation?: boolean,
+  ) {
+    const report = await this.reportedContentRepo.findOne({
+      where: { reportId },
+    });
     if (!report) throw new NotFoundException('Report not found');
     report.status = action === 'delete' ? 'deleted' : 'dismissed';
     report.reviewedBy = adminId;
     await this.reportedContentRepo.save(report);
-    await this.adminAuthService.logActivity(adminId, action === 'delete' ? 'DELETE_CONTENT' : 'DISMISS_REPORT', 'Content', String(reportId), `${action === 'delete' ? 'Deleted' : 'Dismissed'} reported content from ${report.postOwnerName}`);
-    
-    if (action === 'delete' && report.contentType === 'job' && report.contentId) {
+    await this.adminAuthService.logActivity(
+      adminId,
+      action === 'delete' ? 'DELETE_CONTENT' : 'DISMISS_REPORT',
+      'Content',
+      String(reportId),
+      `${action === 'delete' ? 'Deleted' : 'Dismissed'} reported content from ${report.postOwnerName}`,
+    );
+
+    if (
+      action === 'delete' &&
+      report.contentType === 'job' &&
+      report.contentId
+    ) {
       try {
-        await this.jobRepo.query('DELETE FROM ptj.applications WHERE job_id = $1', [report.contentId]);
+        await this.jobRepo.query(
+          'DELETE FROM ptj.applications WHERE job_id = $1',
+          [report.contentId],
+        );
         await this.jobRepo.delete(report.contentId);
       } catch (err) {
         console.error('Error deleting job or applications:', err);
@@ -64,13 +93,17 @@ export class AdminContentManagementService {
         let ownerName = report.postOwnerName;
 
         if (/^\d+$/.test(report.postOwnerId)) {
-          const company = await this.companyRepo.findOne({ where: { companyId: Number(report.postOwnerId) } });
+          const company = await this.companyRepo.findOne({
+            where: { companyId: Number(report.postOwnerId) },
+          });
           if (company && company.contactEmail) {
             emailAddress = company.contactEmail;
             ownerName = company.name;
           }
         } else {
-          const user = await this.userRepo.findOne({ where: { userId: report.postOwnerId } });
+          const user = await this.userRepo.findOne({
+            where: { userId: report.postOwnerId },
+          });
           if (user && user.email) {
             emailAddress = user.email;
             ownerName = user.fullName || ownerName;
@@ -78,15 +111,16 @@ export class AdminContentManagementService {
         }
 
         if (emailAddress) {
-          const emailBody = action === 'delete' 
-            ? 'تم حذف وظيفتك لانتهاكها معايير الموقع. نرجو الالتزام بالقوانين لتجنب إيقاف حسابك.'
-            : 'هذا إنذار بخصوص مخالفة معايير الموقع. يرجى الالتزام لتجنب إيقاف حسابك.';
-            
+          const emailBody =
+            action === 'delete'
+              ? 'تم حذف وظيفتك لانتهاكها معايير الموقع. نرجو الالتزام بالقوانين لتجنب إيقاف حسابك.'
+              : 'هذا إنذار بخصوص مخالفة معايير الموقع. يرجى الالتزام لتجنب إيقاف حسابك.';
+
           await this.mailService.sendModerationEmail(
             emailAddress,
             ownerName,
             emailBody,
-            'WARNING'
+            'WARNING',
           );
         }
       } catch (err) {
@@ -94,7 +128,9 @@ export class AdminContentManagementService {
       }
     }
 
-    return { message: `Report has been ${action === 'delete' ? 'deleted' : 'dismissed'}.` };
+    return {
+      message: `Report has been ${action === 'delete' ? 'deleted' : 'dismissed'}.`,
+    };
   }
 
   async submitReport(data: Partial<ReportedContent>) {

@@ -52,4 +52,7 @@ export class Application {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  @Column({ name: 'rating_closed', type: 'boolean', default: false })
+  ratingClosed: boolean;
 }
