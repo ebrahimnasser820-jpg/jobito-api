@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { PushService } from '../notifications/push.service.js';
 import { User } from '../users/user.entity.js';
 import { Admin } from '../admin/entities/admin.entity.js';
+import { Company } from '../companies/company.entity.js';
 
 @Injectable()
 export class ChatService {
@@ -17,6 +18,7 @@ export class ChatService {
         @InjectRepository(ChatMessage) private chatRepository: Repository<ChatMessage>,
         @InjectRepository(User) private usersRepository: Repository<User>,
         @InjectRepository(Admin) private adminRepository: Repository<Admin>,
+        @InjectRepository(Company) private companyRepository: Repository<Company>,
         private readonly gateway: AppGateway,
         private readonly jobsService: JobsService,
         private readonly notificationsService: NotificationsService,
@@ -126,9 +128,38 @@ export class ChatService {
             select: ['adminId', 'fullName', 'email'],
         });
 
+        // Fetch company info for users
+        const emails = usersInfo.map(u => u.email).filter(Boolean);
+        let companiesInfo: Company[] = [];
+        if (emails.length > 0) {
+            companiesInfo = await this.companyRepository.find({
+                where: { contactEmail: In(emails) }
+            });
+        }
+        
+        const companyMap = new Map<string, Company>();
+        companiesInfo.forEach(c => {
+             if (c.contactEmail) {
+                 companyMap.set(c.contactEmail.toLowerCase(), c);
+             }
+        });
+
         // Merge into a single map
         const userMap = new Map<string, any>();
-        usersInfo.forEach(u => userMap.set(u.userId, u));
+        usersInfo.forEach(u => {
+            const userEmail = u.email ? u.email.toLowerCase() : '';
+            const company = companyMap.get(userEmail);
+            if (company) {
+                 userMap.set(u.userId, {
+                     userId: u.userId,
+                     fullName: company.name,
+                     avatarUrl: company.logoUrl || u.avatarUrl,
+                     email: u.email
+                 });
+            } else {
+                 userMap.set(u.userId, u);
+            }
+        });
         adminsInfo.forEach(a => userMap.set(a.adminId, { ...a, userId: a.adminId, avatarUrl: null }));
 
         return chats.map((chat) => {
@@ -192,18 +223,48 @@ export class ChatService {
     }
 
     async getUserInfo(userId: string) {
-        return await this.usersRepository.findOne({
+        const user = await this.usersRepository.findOne({
             where: { userId },
             select: ['userId', 'fullName', 'avatarUrl', 'email'],
         });
+        if (user && user.email) {
+            const company = await this.companyRepository.findOne({
+                where: { contactEmail: ILike(user.email) }
+            });
+            if (company) {
+                user.fullName = company.name;
+                user.avatarUrl = company.logoUrl || user.avatarUrl;
+            }
+        }
+        return user;
     }
 
     async getUsersInfo(userIds: string[]) {
         if (!userIds || userIds.length === 0) return [];
-        return await this.usersRepository.find({
+        const users = await this.usersRepository.find({
             where: { userId: In(userIds) },
             select: ['userId', 'fullName', 'avatarUrl', 'email'],
         });
+        const emails = users.map(u => u.email).filter(Boolean);
+        if (emails.length > 0) {
+            const companies = await this.companyRepository.find({
+                where: { contactEmail: In(emails) }
+            });
+            const compMap = new Map();
+            companies.forEach(c => {
+                if (c.contactEmail) compMap.set(c.contactEmail.toLowerCase(), c);
+            });
+            for (const user of users) {
+                if (user.email) {
+                    const company = compMap.get(user.email.toLowerCase());
+                    if (company) {
+                        user.fullName = company.name;
+                        user.avatarUrl = company.logoUrl || user.avatarUrl;
+                    }
+                }
+            }
+        }
+        return users;
     }
 
     // ─── Get Support Staff (for regular users) ──────────────────────────

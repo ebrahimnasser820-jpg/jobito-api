@@ -6,6 +6,7 @@ import { ChatController } from './chat.controller.js';
 import { ConversationsController } from './conversations.controller.js';
 import { ChatMessage } from './chat-message.entity.js';
 import { Admin } from '../admin/entities/admin.entity.js';
+import { Company } from '../companies/company.entity.js';
 
 import { JobsModule } from '../jobs/jobs.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
@@ -13,7 +14,7 @@ import { UsersModule } from '../users/users.module.js';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([ChatMessage, Admin]),
+        TypeOrmModule.forFeature([ChatMessage, Admin, Company]),
         JobsModule,
         NotificationsModule,
         UsersModule,
