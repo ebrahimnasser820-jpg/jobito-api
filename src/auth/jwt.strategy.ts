@@ -30,9 +30,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
-    // 3. Check if account is completely deactivated (after 2 days)
-    if (user.deletionRequestedAt && !user.isActive) {
-      throw new UnauthorizedException('Account has been deactivated');
+    // 3. Check if account is suspended or banned by Admin
+    if (!user.isActive) {
+      if (user.accountStatus === 'suspended') {
+        throw new UnauthorizedException('Your account is temporarily suspended by the administration.');
+      }
+      if (user.accountStatus === 'banned') {
+        throw new UnauthorizedException('Your account has been permanently banned.');
+      }
+      // If it's a deactivated account due to deletion request
+      if (user.deletionRequestedAt) {
+        throw new UnauthorizedException('Account has been deactivated.');
+      }
+      throw new UnauthorizedException('Your account is currently inactive.');
     }
 
     // 4. Force logout on other devices if account was scheduled for deletion
@@ -40,7 +50,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (user.deletionRequestedAt && payload.iat) {
       const tokenIssuedAt = new Date(payload.iat * 1000);
       if (tokenIssuedAt < user.deletionRequestedAt) {
-        throw new UnauthorizedException('Session expired due to account deletion request');
+        throw new UnauthorizedException('Session expired due to account deletion request.');
       }
     }
 
