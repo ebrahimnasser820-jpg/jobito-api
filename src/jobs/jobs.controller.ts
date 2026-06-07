@@ -153,7 +153,7 @@ export class JobsController {
           delete dto.benefits;
         }
       }
-    } else if (user.role === 'student' && user.classification === 'tradesman') {
+    } else {
       const userId = user.userId || user.sub;
       if (job.userId === userId) {
         isAuthorized = true;
@@ -161,7 +161,8 @@ export class JobsController {
     }
 
     if (!isAuthorized) {
-      throw new ForbiddenException('You are not authorized to edit this job');
+      const userId = user.userId || user.sub || user.id;
+      throw new ForbiddenException(`You are not authorized. job.userId: ${job.userId}, req.userId: ${userId}, role: ${user.role}, job.companyId: ${job.companyId}`);
     }
 
     return this.jobsService.update(id, dto);
