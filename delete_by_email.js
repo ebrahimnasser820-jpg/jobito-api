@@ -11,7 +11,7 @@ const client = new Client({
 async function main() {
   await client.connect();
   try {
-    const email = 'ahmedhabashy898@gmail.com';
+    const email = 'rolanaeem2004@gmail.com';
     
     // First, find the user
     const res = await client.query('SELECT user_id FROM ptj.users WHERE email = $1', [email]);
@@ -28,6 +28,16 @@ async function main() {
       
       const deleteRes = await client.query('DELETE FROM ptj.users WHERE user_id = $1', [userId]);
       console.log(`Deleted ${deleteRes.rowCount} user(s).`);
+    }
+
+    const companyRes = await client.query('SELECT company_id FROM ptj.companies WHERE contact_email = $1', [email]);
+    if (companyRes.rows.length === 0) {
+      console.log(`Email ${email} not found in ptj.companies.`);
+    } else {
+      const companyId = companyRes.rows[0].company_id;
+      console.log(`Found company ID: ${companyId}`);
+      const deleteComp = await client.query('DELETE FROM ptj.companies WHERE company_id = $1', [companyId]);
+      console.log(`Deleted ${deleteComp.rowCount} company.`);
     }
   } catch (err) {
     console.error('Database query error:', err);

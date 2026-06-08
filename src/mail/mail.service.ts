@@ -1,72 +1,46 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly brevoApiKey: string;
+  private readonly transporter: nodemailer.Transporter;
   private readonly fromEmail: string;
   private readonly senderName: string;
 
   constructor() {
-    this.brevoApiKey = process.env.BREVO_API_KEY || '';
     this.fromEmail = process.env.BREVO_SENDER_EMAIL || 'mohamednasseremam380@gmail.com';
     this.senderName = process.env.BREVO_SENDER_NAME || 'Jobito';
-    this.logger.log('📧 Mail transport: Brevo HTTP API (exclusive/cloud-safe)');
-  }
-
-  /**
-   * Core send method — routes directly to Brevo HTTP API
-   */
-  private async send(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
-    await this.sendViaBrevo(options);
-  }
-
-  /**
-   * Send email via Brevo HTTP API (uses port 443 — never blocked by cloud hosts)
-   */
-  private async sendViaBrevo(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
-    const body: any = {
-      sender: {
-        name: this.senderName,
-        email: this.fromEmail,
+    
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.fromEmail,
+        pass: process.env.GMAIL_APP_PASSWORD || '',
       },
-      to: [
-        {
-          email: options.to,
-        }
-      ],
-      subject: options.subject,
-    };
-
-    if (options.html) {
-      body.htmlContent = options.html;
-    }
-    if (options.text) {
-      body.textContent = options.text;
-    }
-    if (options.replyTo) {
-      body.replyTo = {
-        email: options.replyTo,
-      };
-    }
-
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'api-key': this.brevoApiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`Brevo API error (${response.status}): ${errorData}`);
-    }
+    this.logger.log('📧 Mail transport: Nodemailer (Gmail SMTP)');
+  }
 
-    const result = await response.json();
-    this.logger.log(`✅ Email sent via Brevo to ${options.to} — MessageID: ${(result as any).messageId}`);
+  /**
+   * Core send method — routes directly to Gmail SMTP
+   */
+  private async send(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
+    try {
+      const info = await this.transporter.sendMail({
+        from: `"${this.senderName}" <${this.fromEmail}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+        replyTo: options.replyTo,
+      });
+      this.logger.log(`✅ Email sent via Gmail to ${options.to} — MessageID: ${info.messageId}`);
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send email to ${options.to}: ${error.message}`);
+      throw error;
+    }
   }
 
   /** Send email verification link and code */
