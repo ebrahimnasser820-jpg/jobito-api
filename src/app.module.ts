@@ -37,6 +37,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { TranslationsModule } from './translations/translations.module.js';
 import { AutoTranslationInterceptor } from './translations/auto-translation.interceptor.js';
 import { ServiceRequestsModule } from './service-requests/service-requests.module.js';
+import { PublicStatsModule } from './public-stats/public-stats.module.js';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { ServiceRequestsModule } from './service-requests/service-requests.modul
     AdminModule,
     TranslationsModule,
     ServiceRequestsModule,
+    PublicStatsModule,
   ],
   controllers: [AppController],
   providers: [
