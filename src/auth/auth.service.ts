@@ -579,6 +579,7 @@ export class AuthService {
         location: user.location || null,
         classification: user.classification || null,
         notificationPreferences: user.notificationPreferences || null,
+        deletionRequestedAt: user.deletionRequestedAt || null,
         services: user.services || [],
         criminalRecordUrl: user.criminalRecordUrl || null,
         accountStatus: user.accountStatus,
