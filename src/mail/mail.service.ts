@@ -18,7 +18,7 @@ export class MailService {
       secure: false,
       family: 4, // Force IPv4 — fixes ENETUNREACH on IPv6-disabled networks
       auth: {
-        user: this.fromEmail,
+        user: process.env.BREVO_SMTP_LOGIN || this.fromEmail,
         pass: process.env.BREVO_SMTP_KEY || '',
       },
     } as nodemailer.TransportOptions);
