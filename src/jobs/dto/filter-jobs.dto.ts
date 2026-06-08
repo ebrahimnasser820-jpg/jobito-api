@@ -7,11 +7,11 @@ export class FilterJobsDto {
     search?: string;
 
     @IsOptional()
-    @IsEnum(JobType)
-    jobType?: JobType;
+    @IsString()
+    jobType?: string;
 
     @IsOptional()
-    @IsNumberString()
+    @IsString()
     categoryId?: string;
 
     @IsOptional()
