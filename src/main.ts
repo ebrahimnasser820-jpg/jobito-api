@@ -1,4 +1,7 @@
 // Main entry point for Jobito API
+import dns from 'dns';
+dns.setDefaultResultOrder('ipv4first');
+
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
