@@ -1,49 +1,60 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: nodemailer.Transporter;
+  private readonly brevoApiKey: string;
   private readonly fromEmail: string;
   private readonly senderName: string;
 
   constructor() {
+    this.brevoApiKey = process.env.BREVO_API_KEY || '';
     this.fromEmail = process.env.BREVO_SENDER_EMAIL || 'mohamednasseremam380@gmail.com';
     this.senderName = process.env.BREVO_SENDER_NAME || 'Jobito';
     
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-      port: 2525,
-      secure: false,
-      family: 4, // Force IPv4 — fixes ENETUNREACH on IPv6-disabled networks
-      auth: {
-        user: process.env.BREVO_SMTP_LOGIN || this.fromEmail,
-        pass: process.env.BREVO_SMTP_KEY || '',
-      },
-    } as nodemailer.TransportOptions);
-
-    this.logger.log('📧 Mail transport: Nodemailer (Brevo SMTP)');
+    if (!this.brevoApiKey) {
+      this.logger.error('🚨 BREVO_API_KEY is MISSING! Emails will NOT be sent. Set it in your environment variables.');
+    } else {
+      this.logger.log(`📧 Mail transport: Brevo HTTP API (Key: ${this.brevoApiKey.substring(0, 15)}...)`);
+    }
   }
 
   /**
-   * Core send method — routes directly to Gmail SMTP
+   * Core send method — uses Brevo HTTP API (port 443, never blocked by cloud hosts)
    */
   private async send(options: { from: string; to: string; subject: string; html?: string; text?: string; replyTo?: string }): Promise<void> {
-    try {
-      const info = await this.transporter.sendMail({
-        from: `"${this.senderName}" <${this.fromEmail}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text,
-        replyTo: options.replyTo,
-      });
-      this.logger.log(`✅ Email sent via Gmail to ${options.to} — MessageID: ${info.messageId}`);
-    } catch (error: any) {
-      this.logger.error(`❌ Failed to send email to ${options.to}: ${error.message}`);
-      throw error;
+    if (!this.brevoApiKey) {
+      this.logger.error(`🚨 Cannot send email to ${options.to} — BREVO_API_KEY is not set!`);
+      throw new Error('Mail service not configured: BREVO_API_KEY is missing');
     }
+
+    const body: any = {
+      sender: { name: this.senderName, email: this.fromEmail },
+      to: [{ email: options.to }],
+      subject: options.subject,
+    };
+    if (options.html) body.htmlContent = options.html;
+    if (options.text) body.textContent = options.text;
+    if (options.replyTo) body.replyTo = { email: options.replyTo };
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': this.brevoApiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      this.logger.error(`❌ Brevo API error (${response.status}) sending to ${options.to}: ${errorData}`);
+      throw new Error(`Brevo API error (${response.status}): ${errorData}`);
+    }
+
+    const result = await response.json();
+    this.logger.log(`✅ Email sent via Brevo to ${options.to} — MessageID: ${(result as any).messageId}`);
   }
 
   /** Send email verification link and code */
