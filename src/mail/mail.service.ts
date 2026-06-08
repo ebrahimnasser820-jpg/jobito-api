@@ -13,17 +13,17 @@ export class MailService {
     this.senderName = process.env.BREVO_SENDER_NAME || 'Jobito';
     
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false,
       family: 4, // Force IPv4 — fixes ENETUNREACH on IPv6-disabled networks
       auth: {
         user: this.fromEmail,
-        pass: process.env.GMAIL_APP_PASSWORD || '',
+        pass: process.env.BREVO_SMTP_KEY || '',
       },
     } as nodemailer.TransportOptions);
 
-    this.logger.log('📧 Mail transport: Nodemailer (Gmail SMTP)');
+    this.logger.log('📧 Mail transport: Nodemailer (Brevo SMTP)');
   }
 
   /**
