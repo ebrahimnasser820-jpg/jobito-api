@@ -60,12 +60,10 @@ export class AuthService {
   }
 
   /** Save OTP code to DB + cleanup old expired codes */
-  private async saveOtp(userId: string, code: string): Promise<OtpCode> {
-    // Invalidate previous unused codes for this user
-    await this.otpRepo.update(
-      { userId: userId, isUsed: false },
-      { isUsed: true },
-    );
+  private async saveOtp(targetId: string, code: string, isAdmin = false): Promise<OtpCode> {
+    // Invalidate previous unused codes for this user/admin
+    const whereClause = isAdmin ? { adminId: targetId, isUsed: false } : { userId: targetId, isUsed: false };
+    await this.otpRepo.update(whereClause, { isUsed: true });
 
     // Cleanup expired codes older than 1 hour (issue #10)
     await this.otpRepo.delete({
@@ -73,7 +71,7 @@ export class AuthService {
     });
 
     const otp = this.otpRepo.create({
-      userId: userId,
+      ...(isAdmin ? { adminId: targetId } : { userId: targetId }),
       code,
       expiresAt: new Date(Date.now() + 30 * 60 * 1000), // Increased to 30 minutes
     });
@@ -81,13 +79,13 @@ export class AuthService {
   }
 
   /** Validate OTP code with detailed logging */
-  private async validateOtp(userId: string, code: string): Promise<OtpCode> {
+  private async validateOtp(targetId: string, code: string, isAdmin = false): Promise<OtpCode> {
     const cleanCode = code.trim();
-    this.logger.info(`🔍 [AuthService] Validating OTP code: [${cleanCode}] for user: ${userId}`);
+    this.logger.info(`🔍 [AuthService] Validating OTP code: [${cleanCode}] for ${isAdmin ? 'admin' : 'user'}: ${targetId}`);
 
     const otp = await this.otpRepo.findOne({
       where: {
-        userId: userId,
+        ...(isAdmin ? { adminId: targetId } : { userId: targetId }),
         code: cleanCode,
       },
       order: { expiresAt: 'DESC' }
@@ -95,8 +93,11 @@ export class AuthService {
 
     if (!otp) {
       // Find ANY recent OTP for this user to log more details
-      const anyOtp = await this.otpRepo.findOne({ where: { userId }, order: { expiresAt: 'DESC' } });
-      this.logger.warn(`❌ [AuthService] OTP code [${cleanCode}] not found for user ${userId}. Latest code in DB for this user was: [${anyOtp?.code}]`);
+      const anyOtp = await this.otpRepo.findOne({ 
+        where: isAdmin ? { adminId: targetId } : { userId: targetId }, 
+        order: { expiresAt: 'DESC' } 
+      });
+      this.logger.warn(`❌ [AuthService] OTP code [${cleanCode}] not found for ${isAdmin ? 'admin' : 'user'} ${targetId}. Latest code in DB: [${anyOtp?.code}]`);
       throw new BadRequestException('Invalid verification code.');
     }
 
@@ -435,7 +436,7 @@ export class AuthService {
       }
 
       const code = this.generateCode();
-      await this.saveOtp(admin.adminId, code);
+      await this.saveOtp(admin.adminId, code, true);
       
       try {
         await this.mailService.sendAdmin2FACode(admin.email, code);
@@ -605,7 +606,7 @@ export class AuthService {
     }
 
     // Validate the OTP
-    await this.validateOtp(adminUser.adminId, code);
+    await this.validateOtp(adminUser.adminId, code, true);
 
     // If valid, generate JWT payload
     const payload = {

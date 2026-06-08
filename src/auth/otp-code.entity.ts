@@ -12,12 +12,15 @@ export class OtpCode {
     @PrimaryGeneratedColumn('uuid', { name: 'otp_id' })
     otpId: string;
 
-    @Column({ name: 'user_id', type: 'uuid' })
+    @Column({ name: 'user_id', type: 'uuid', nullable: true })
     userId: string;
 
     @ManyToOne(() => User, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'user_id' })
     user: User;
+
+    @Column({ name: 'admin_id', type: 'uuid', nullable: true })
+    adminId: string;
 
     @Column({ length: 10 })
     code: string;
