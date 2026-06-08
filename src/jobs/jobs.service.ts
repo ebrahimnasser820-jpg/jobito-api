@@ -240,13 +240,32 @@ export class JobsService {
 
       if (filters.jobType) {
         // jobType could be a comma-separated string from the frontend
+        // Map normalized filter names to all possible stored DB values
+        const jobTypeAliases: Record<string, string[]> = {
+          'Full-time': ['Full-time', 'full-time', '1', 'دوام كامل'],
+          'Part-time': ['Part-time', 'part-time', '0', 'دوام جزئي'],
+          'Remote': ['Remote', 'remote', 'عن بعد'],
+          'Freelance': ['Freelance', 'freelance', 'عمل حر'],
+          'Internship': ['Internship', 'internship', 'intern', 'تدريب'],
+          'One-time': ['One-time', 'one-time', '2', 'quick service', 'عمل لمرة واحدة'],
+          'Contract': ['Contract', 'contract', 'عقد'],
+          'Event': ['Event', 'event', 'حدث'],
+        };
+
         const types = filters.jobType.split(',').map(t => t.trim());
+        // Expand each filter type to all its possible stored values
+        const allValues: string[] = [];
+        types.forEach(t => {
+          const aliases = jobTypeAliases[t] || jobTypeAliases[t.charAt(0).toUpperCase() + t.slice(1)] || [t];
+          allValues.push(...aliases);
+        });
+
         qb.andWhere(new Brackets(qb => {
-          types.forEach((t, idx) => {
+          allValues.forEach((val, idx) => {
             if (idx === 0) {
-              qb.where(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: t });
+              qb.where(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: val });
             } else {
-              qb.orWhere(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: t });
+              qb.orWhere(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: val });
             }
           });
         }));
