@@ -1,11 +1,19 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../users/user.entity.js';
 
 export enum ServiceRequestStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
-  COMPLETED = 'completed'
+  COMPLETED = 'completed',
 }
 
 @Entity('service_requests')
@@ -25,7 +33,7 @@ export class ServiceRequest {
   @Column({
     type: 'enum',
     enum: ServiceRequestStatus,
-    default: ServiceRequestStatus.PENDING
+    default: ServiceRequestStatus.PENDING,
   })
   status: ServiceRequestStatus;
 

@@ -28,7 +28,8 @@ export class CompaniesService {
     const qb = this.repo.createQueryBuilder('company')
       .leftJoinAndSelect('company.jobs', 'job')
       .leftJoinAndSelect('job.category', 'category')
-      .where("company.verificationStatus = 'APPROVED'");
+      .where("company.verificationStatus = 'APPROVED'")
+      .andWhere('company.isActive = :isActive', { isActive: true });
 
     if (filters.search) {
       qb.andWhere(
@@ -103,7 +104,7 @@ export class CompaniesService {
 
   async findOne(id: number) {
     const company = await this.repo.findOne({
-      where: { companyId: id },
+      where: { companyId: id, isActive: true },
       relations: ['jobs', 'jobs.category'],
     });
     if (!company) {
@@ -115,8 +116,7 @@ export class CompaniesService {
   async findByContactEmailOrName(email: string) {
     if (!email) return null;
     return this.repo.createQueryBuilder('company')
-      .where('LOWER(company.contactEmail) = LOWER(:email)', { email })
-      .orWhere('LOWER(company.name) = LOWER(:name)', { name: email }) // email could be name in some contexts
+      .where('(LOWER(company.contactEmail) = LOWER(:email) OR LOWER(company.name) = LOWER(:name))', { email, name: email })
       .orderBy('company.companyId', 'DESC')
       .getOne();
   }

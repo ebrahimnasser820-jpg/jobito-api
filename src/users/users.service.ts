@@ -6,6 +6,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AppGateway } from '../common/gateways/app.gateway.js';
 import { MongoUserProfileService } from './mongo-user-profile.service.js';
 import { MailService } from '../mail/mail.service.js';
+import { CompaniesService } from '../companies/companies.service.js';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +19,8 @@ export class UsersService {
     private readonly gateway: AppGateway,
     private mongoProfileService: MongoUserProfileService,
     private mailService: MailService,
+    @Inject(forwardRef(() => CompaniesService))
+    private companiesService: CompaniesService,
   ) { }
 
   findAll() {
@@ -146,6 +150,17 @@ export class UsersService {
       phone: null,
       googleId: null,
     });
+
+    if (user.role === 'company') {
+      const company = await this.companiesService.findByContactEmailOrName(user.email);
+      if (company) {
+        await this.companiesService.update(company.companyId, { 
+          isActive: false, 
+          contactEmail: `deleted_company_${company.companyId}@jobito.com`,
+          name: 'Deleted Company' 
+        } as any);
+      }
+    }
   }
 
   private readonly logger = new Logger(UsersService.name);
@@ -181,6 +196,18 @@ export class UsersService {
           phone: null,
           googleId: null,
         });
+
+        if (user.role === 'company') {
+          const company = await this.companiesService.findByContactEmailOrName(user.email);
+          if (company) {
+            await this.companiesService.update(company.companyId, { 
+              isActive: false, 
+              contactEmail: `deleted_company_${company.companyId}@jobito.com`,
+              name: 'Deleted Company' 
+            } as any);
+          }
+        }
+        
         this.logger.log(`Account ${user.userId} has been processed for deletion.`);
       } catch (error) {
         this.logger.error(`Failed to process deletion for user ${user.userId}: ${error.message}`);

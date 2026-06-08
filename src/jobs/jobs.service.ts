@@ -187,6 +187,11 @@ export class JobsService {
         });
       } else {
         qb.andWhere('job.isActive = :active', { active: true });
+        qb.andWhere(new Brackets(query => {
+          query.where('job.companyId IS NOT NULL AND company.isActive = :compActive', { compActive: true })
+               .orWhere('job.userId IS NOT NULL AND user.deletionRequestedAt IS NULL')
+               .orWhere('job.companyId IS NULL AND job.userId IS NULL');
+        }));
       }
 
       if (filters.search) {
@@ -260,9 +265,8 @@ export class JobsService {
       }
 
       if (filters.excludeClassification) {
-        qb.andWhere('job.classification != :excludeCls', {
-          excludeCls: filters.excludeClassification,
-        });
+        const excludeCls = filters.excludeClassification.split(',').map(c => c.trim());
+        qb.andWhere('(job.classification NOT IN (:...excludeCls) OR job.classification IS NULL)', { excludeCls });
       }
 
       if (filters.jobLevel) {
@@ -611,6 +615,11 @@ export class JobsService {
       .leftJoinAndSelect('job.user', 'user')
       .leftJoinAndSelect('job.categories', 'categories')
       .where('job.isActive = :isActive', { isActive: true })
+      .andWhere(new Brackets(query => {
+        query.where('job.companyId IS NOT NULL AND company.isActive = :compActive', { compActive: true })
+             .orWhere('job.userId IS NOT NULL AND user.deletionRequestedAt IS NULL')
+             .orWhere('job.companyId IS NULL AND job.userId IS NULL');
+      }))
       .andWhere('job.jobId != :jobId', { jobId: id });
 
     if (job.categoryId) {

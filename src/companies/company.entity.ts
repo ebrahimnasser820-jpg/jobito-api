@@ -93,6 +93,9 @@ export class Company {
   @Column({ name: 'official_national_id', length: 50, nullable: true })
   officialNationalId: string;
 
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

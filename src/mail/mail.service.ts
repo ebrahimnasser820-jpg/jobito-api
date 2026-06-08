@@ -357,6 +357,45 @@ export class MailService {
     });
   }
 
+  /** Send account deletion scheduled email (2 days grace period) */
+  async sendAccountDeletionScheduledEmail(to: string, name: string): Promise<void> {
+    await this.send({
+      from: `"Jobito" <${this.fromEmail}>`,
+      to,
+      subject: 'Jobito — تم جدولة حذف حسابك',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; padding: 40px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);" dir="rtl">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; background: #fef3c7; color: #f59e0b; width: 64px; height: 64px; line-height: 64px; border-radius: 50%; font-size: 32px; margin-bottom: 16px;">
+              ⚠️
+            </div>
+            <h1 style="color: #111827; font-size: 22px; font-weight: 800; margin: 0;">طلب حذف الحساب قيد التنفيذ</h1>
+          </div>
+          
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            مرحباً <b>${name}</b>،
+          </p>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            لقد تلقينا طلبك لحذف حسابك من منصة Jobito. تم وضع الحساب في جدول الحذف وسيتم إزالة جميع بياناتك بشكل نهائي من أنظمتنا بعد <b>يومين (48 ساعة)</b>. 
+          </p>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            لقد تم إخفاء وظائفك وملفك الشخصي من الموقع في الوقت الحالي.
+          </p>
+
+          <div style="background: #f9fafb; border-right: 4px solid #f59e0b; padding: 20px; margin: 24px 0; border-radius: 4px;">
+            <p style="font-size: 15px; color: #1f2937; margin: 0; font-weight: bold;">تغيير الرأي؟</p>
+            <p style="font-size: 14px; color: #4b5563; margin: 8px 0 0 0;">إذا لم تقم بهذا الطلب أو غيرت رأيك، يمكنك إلغاء الحذف ببساطة عن طريق تسجيل الدخول إلى حسابك قبل انقضاء اليومين والضغط على زر "إلغاء الحذف".</p>
+          </div>
+          
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            شكراً لكونك جزءاً من منصة Jobito.
+          </p>
+        </div>
+      `,
+    });
+  }
+
   /** Send 2FA code to System Admin for Dashboard Access */
   async sendAdmin2FACode(to: string, code: string): Promise<void> {
     await this.send({

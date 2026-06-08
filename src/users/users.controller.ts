@@ -3,6 +3,8 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { AccountDeletionGuard } from '../common/guards/account-deletion.guard.js';
 import { UsersService } from './users.service.js';
 import { AuthService } from '../auth/auth.service.js';
+import { CompaniesService } from '../companies/companies.service.js';
+import { MailService } from '../mail/mail.service.js';
 import * as bcrypt from 'bcryptjs';
 
 @Controller('users')
@@ -11,6 +13,9 @@ export class UsersController {
     private usersService: UsersService,
     @Inject(forwardRef(() => AuthService))
     private authService: AuthService,
+    @Inject(forwardRef(() => CompaniesService))
+    private companiesService: CompaniesService,
+    private mailService: MailService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -209,8 +214,22 @@ export class UsersController {
             deletionRequestedAt: new Date(),
         });
 
+        // Hide company profile immediately if user is a company
+        if (user.role === 'company') {
+            const company = await this.companiesService.findByContactEmailOrName(user.email);
+            if (company) {
+                await this.companiesService.update(company.companyId, { isActive: false } as any);
+            }
+        }
+
         const deleteDate = new Date();
         deleteDate.setDate(deleteDate.getDate() + 2);
+
+        try {
+            await this.mailService.sendAccountDeletionScheduledEmail(user.email, user.fullName || 'مستخدم Jobito');
+        } catch (error) {
+            console.error('Failed to send account deletion email:', error);
+        }
 
         return {
             message: 'Account scheduled for deletion. You have 2 days to cancel.',
@@ -235,7 +254,17 @@ export class UsersController {
             isActive: true,
         });
 
-        return { message: 'Account deletion cancelled successfully' };
+        // Restore company profile if user is a company
+        if (user.role === 'company') {
+            const company = await this.companiesService.findByContactEmailOrName(user.email);
+            if (company) {
+                await this.companiesService.update(company.companyId, { isActive: true } as any);
+            }
+        }
+
+        const { access_token } = await this.authService.refreshUserToken(userId);
+
+        return { message: 'Account deletion cancelled successfully', access_token };
     }
 
     @UseGuards(JwtAuthGuard)
