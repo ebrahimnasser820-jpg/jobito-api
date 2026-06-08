@@ -13,7 +13,10 @@ export class MailService {
     this.senderName = process.env.BREVO_SENDER_NAME || 'Jobito';
     
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      family: 4, // Force IPv4 — fixes ENETUNREACH on IPv6-disabled networks
       auth: {
         user: this.fromEmail,
         pass: process.env.GMAIL_APP_PASSWORD || '',
