@@ -52,5 +52,9 @@ export class FilterJobsDto {
 
     @IsOptional()
     @IsString()
+    ownerType?: string;
+
+    @IsOptional()
+    @IsString()
     _t?: string;
 }

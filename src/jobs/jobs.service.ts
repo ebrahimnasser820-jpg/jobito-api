@@ -290,6 +290,14 @@ export class JobsService {
         }));
       }
 
+      if (filters.ownerType) {
+        if (filters.ownerType === 'company') {
+          qb.andWhere('job.userId IS NULL');
+        } else if (filters.ownerType === 'tradesman') {
+          qb.andWhere('job.userId IS NOT NULL');
+        }
+      }
+
       if (filters.salaryRange) {
         const ranges = filters.salaryRange.split(',').map(r => r.trim());
         qb.andWhere(new Brackets(query => {

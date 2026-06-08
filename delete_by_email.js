@@ -11,7 +11,7 @@ const client = new Client({
 async function main() {
   await client.connect();
   try {
-    const email = 'kmmdsd123@gmail.com';
+    const email = 'ahmedhabashy898@gmail.com';
     
     // First, find the user
     const res = await client.query('SELECT user_id FROM ptj.users WHERE email = $1', [email]);
