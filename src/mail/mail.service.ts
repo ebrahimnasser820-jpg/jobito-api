@@ -14,7 +14,7 @@ export class MailService {
     
     this.transporter = nodemailer.createTransport({
       host: 'smtp-relay.brevo.com',
-      port: 587,
+      port: 2525,
       secure: false,
       family: 4, // Force IPv4 — fixes ENETUNREACH on IPv6-disabled networks
       auth: {
