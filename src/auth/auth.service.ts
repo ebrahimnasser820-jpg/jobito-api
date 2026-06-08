@@ -439,11 +439,13 @@ export class AuthService {
       await this.saveOtp(admin.adminId, code, true);
       
       try {
+        this.logger.warn(`🔑 [DEV-MODE] ADMIN OTP IS: ${code}`); // Output code to console for easy local testing
         await this.mailService.sendAdmin2FACode(admin.email, code);
         this.logger.log(`🔐 2FA code sent to admin ${admin.email}`);
       } catch (err) {
         this.logger.error(`Failed to send 2FA email to ${admin.email}: ${err.message}`);
-        throw new BadRequestException('Failed to send 2FA verification email. Please try again later.');
+        // Temporarily bypass throwing the error so frontend can transition to OTP page
+        // throw new BadRequestException('Failed to send 2FA verification email. Please try again later.');
       }
 
       // We DO NOT log them in yet, nor generate JWT
