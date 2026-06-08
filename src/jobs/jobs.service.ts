@@ -263,9 +263,9 @@ export class JobsService {
         qb.andWhere(new Brackets(qb => {
           allValues.forEach((val, idx) => {
             if (idx === 0) {
-              qb.where(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: val });
+              qb.where(`job.jobType::text LIKE :type${idx}`, { [`type${idx}`]: `%${val}%` });
             } else {
-              qb.orWhere(`job.jobType::jsonb ? :type${idx}`, { [`type${idx}`]: val });
+              qb.orWhere(`job.jobType::text LIKE :type${idx}`, { [`type${idx}`]: `%${val}%` });
             }
           });
         }));
