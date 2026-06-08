@@ -37,7 +37,7 @@ export class RatingsService {
     const targetUserId = dto.targetUserId || null;
     const targetCompanyId = !isCompanyRater && dto.companyId ? dto.companyId : null;
 
-    const whereConditions = [];
+    const whereConditions: any[] = [];
 
     if (isCompanyRater && targetUserId) {
       // Company rating User (Applicant)
@@ -85,7 +85,7 @@ export class RatingsService {
       }
 
       if (!hiredApp.ratingClosed) {
-        const waitDays = 7;
+        let waitDays = 7;
         const waitMs = waitDays * 24 * 60 * 60 * 1000;
         
         const hiringDate = new Date(hiredApp.appliedAt).getTime();

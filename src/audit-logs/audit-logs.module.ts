@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditLog } from './audit-log.entity.js';
@@ -14,7 +14,7 @@ import { Job } from '../jobs/job.entity.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([AuditLog, Job]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     MailModule,
   ],
   controllers: [AiSmartController],

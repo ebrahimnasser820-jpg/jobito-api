@@ -8,7 +8,6 @@ import { Repository } from 'typeorm';
 import { Image, ImageEntityType, ImageType } from './image.entity.js';
 import { CreateImageDto } from './dto/create-image.dto.js';
 import { UsersService } from '../users/users.service.js';
-import { UsersService } from '../users/users.service.js';
 
 @Injectable()
 export class ImagesService {

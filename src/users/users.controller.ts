@@ -111,7 +111,7 @@ export class UsersController {
         const { applications, applicantProfile, ...cleanUser } = updatedUser as any;
 
         // If the user's account is now pending admin approval, tell the client to logout
-        if (updatedUser.accountStatus === 'pending') {
+        if (updatedUser?.accountStatus === 'pending') {
             return {
                 ...cleanUser,
                 ...(applicantProfile || {}),

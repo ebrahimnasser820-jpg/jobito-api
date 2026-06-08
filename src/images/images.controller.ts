@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { extname } from 'path';
 import { ImagesService } from './images.service.js';
 import { CreateImageDto } from './dto/create-image.dto.js';

@@ -441,7 +441,7 @@ export class AuthService {
       try {
         this.logger.warn(`🔑 [DEV-MODE] ADMIN OTP IS: ${code}`); // Output code to console for easy local testing
         await this.mailService.sendAdmin2FACode(admin.email, code);
-        this.logger.log(`🔐 2FA code sent to admin ${admin.email}`);
+        this.logger.info(`🔐 2FA code sent to admin ${admin.email}`);
       } catch (err) {
         this.logger.error(`Failed to send 2FA email to ${admin.email}: ${err.message}`);
         // Temporarily bypass throwing the error so frontend can transition to OTP page
