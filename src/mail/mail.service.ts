@@ -21,7 +21,7 @@ export class MailService {
         user: this.fromEmail,
         pass: process.env.GMAIL_APP_PASSWORD || '',
       },
-    });
+    } as nodemailer.TransportOptions);
 
     this.logger.log('📧 Mail transport: Nodemailer (Gmail SMTP)');
   }
