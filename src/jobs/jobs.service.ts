@@ -263,9 +263,9 @@ export class JobsService {
         qb.andWhere(new Brackets(qb => {
           allValues.forEach((val, idx) => {
             if (idx === 0) {
-              qb.where(`job.jobType::text LIKE :type${idx}`, { [`type${idx}`]: `%${val}%` });
+              qb.where(`job.job_type::text ILIKE :type${idx}`, { [`type${idx}`]: `%${val}%` });
             } else {
-              qb.orWhere(`job.jobType::text LIKE :type${idx}`, { [`type${idx}`]: `%${val}%` });
+              qb.orWhere(`job.job_type::text ILIKE :type${idx}`, { [`type${idx}`]: `%${val}%` });
             }
           });
         }));
@@ -361,14 +361,18 @@ export class JobsService {
         // Job Type
         const types = Array.isArray(j.jobType) ? j.jobType : [];
         types.forEach(t => {
-          let key = 'Full-time';
+          let key: string | null = null;
           const lowerT = String(t).toLowerCase();
-          if (lowerT.includes('part')) key = 'Part-time';
-          else if (lowerT.includes('freelance') || lowerT.includes('عمل حر')) key = 'Freelance';
-          else if (lowerT.includes('intern')) key = 'Internship';
-          else if (lowerT.includes('remote')) key = 'Remote';
-          else if (lowerT.includes('one-time') || lowerT.includes('2')) key = 'One-time';
-          facets.jobType[key] = (facets.jobType[key] || 0) + 1;
+          if (lowerT.includes('part') || lowerT.includes('جزئ')) key = 'Part-time';
+          else if (lowerT.includes('freelance') || lowerT.includes('حر')) key = 'Freelance';
+          else if (lowerT.includes('intern') || lowerT.includes('تدريب')) key = 'Internship';
+          else if (lowerT.includes('remote') || lowerT.includes('بعد')) key = 'Remote';
+          else if (lowerT.includes('one-time') || lowerT.includes('مرة') || lowerT === '2') key = 'One-time';
+          else if (lowerT.includes('full') || lowerT.includes('كامل') || lowerT === '1') key = 'Full-time';
+          
+          if (key) {
+            facets.jobType[key] = (facets.jobType[key] || 0) + 1;
+          }
         });
 
         // Category (we group by categoryId but frontend maps it, so we map to names or ids)
